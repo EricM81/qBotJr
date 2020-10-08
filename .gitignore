@@ -338,3 +338,13 @@ ASALocalRun/
 
 # BeatPulse healthcheck temp database
 healthchecksdb
+#Paket dependency manager
+.paket/
+paket-files/
+
+/QBotJr/config.yml
+/QBotJr/App.config
+/QBotJr/config.json
+/QBotJr/settings.json
+
+
