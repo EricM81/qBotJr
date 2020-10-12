@@ -117,7 +117,9 @@ module stuff =
             
 
             //Async.AwaitTask(msg.Channel.SendMessageAsync(sprintf "React with %s if you want to play sub games!")) |> ignore
-        
+//        | "QBOT" ->
+//            Async.AwaitTask(msg.Channel.SendMessageAsync(Test.qBotMain)) |> ignore
+//            ()
         | _ -> 
             match msg.Author.Id with 
             | 442438729207119892UL -> logger.WriteLine msg.Content

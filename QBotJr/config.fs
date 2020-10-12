@@ -8,7 +8,7 @@ open System.Collections.Generic
 type DiscordEntity = {
     ID : uint64 ;
     Name : string
-}
+    }
 
 [<Struct>]
 type BotSettings = {
@@ -20,13 +20,13 @@ type BotSettings = {
 type GuildSettings = 
     {
     GuildID : uint64;
-    AdminRoles : DiscordEntity[];
-    CaptainRoles : DiscordEntity[];
+    AdminRoles : uint64 list;
+    CaptainRoles : uint64 list;
     PlayersPerGame : int;
     AnnounceChannel : DiscordEntity option
     }
     static member defaultGuild id = 
-        {GuildSettings.GuildID = id ; AdminRoles = [||]; CaptainRoles = [||]; PlayersPerGame = 9; AnnounceChannel = None}
+        {GuildSettings.GuildID = id ; AdminRoles = []; CaptainRoles = []; PlayersPerGame = 9; AnnounceChannel = None}
 
 type config() = 
 

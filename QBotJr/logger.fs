@@ -8,7 +8,7 @@ type private _logger() =
     let mutable disposed = false
     
 
-    let f = File.Open((sprintf "%s%s-DiscoLog.txt" config.BotSettings.LogFileRoot (DateTime.Today.ToString("YYYYMMdd"))), FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read)
+    let f = File.Open((sprintf "%s%s-DiscoLog.txt" config.BotSettings.LogFileRoot (DateTime.Today.ToString("yyyyMMdd"))), FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read)
     let sw = new StreamWriter(f)
     do  
         f.Seek(0L, SeekOrigin.End) |> ignore
