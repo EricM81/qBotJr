@@ -8,15 +8,15 @@
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="paket.dependenciess" />
-    <None Include="paket.locks" />
+    <None Include="paket.dependencies" />
+    <None Include="paket.lock" />
     <None Include="settings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="App.config" />
-    <Compile Include="configs.fs" />
-    <Compile Include="loggers.fs" />
-    <Compile Include="Emoji.fs" />
+    <Compile Include="config.fs" />
+    <Compile Include="logger.fs" />
+    <Compile Include="Emojis.fs" />
     <Compile Include="CommandFilters\CommandT.fs" />
     <Compile Include="CommandFilters\Creator.fs" />
     <Compile Include="CommandFilters\qBot.fs" />
@@ -33,8 +33,8 @@
     <Compile Include="CommandFilters\qCustoms.fs" />
     <Compile Include="CommandService.fs" />
     <Compile Include="Scheduler.fs" />
-    <Compile Include="Services.fs" />
-    <Compile Include="Programs.fs" />
+    <Compile Include="Service.fs" />
+    <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.8" />
