@@ -19,13 +19,20 @@ let client = new DiscordSocketClient(clientConfig)
 [<EntryPoint>]
 let main argv =
 
-    //client.add_Log (fun log -> logAsync log)
+    client.add_Log (fun log ->
+        logger.WriteLine (sprintf "%s\n%s\n" log.Source log.Message)
+        Task.CompletedTask)
     //client.add_Ready (fun _ -> readyAsync "")
-    client.add_MessageReceived (fun msg -> CommandService.messageReceivedAsync msg )
+    client.add_MessageReceived (fun msg ->
+        AsyncService.Receive (NewMessage msg)
+        )
     //client.add_MessageUpdated (fun before after channel -> messageUpdatedAsync before after channel)
-    //client.add_ReactionAdded (fun msg channel reaction -> messageReactedAsync msg channel reaction )
+    client.add_ReactionAdded (fun msg channel reaction ->
+        AsyncService.Receive (MessageReaction (MessageReaction.create msg channel reaction))
+        )
+    //TODO start scheduler
         
-        //sprintf "%s" config.BotSettings.DiscordToken |> logger.WriteLine 
+     
     let foo = 
         async{
             let x = Async.AwaitTask(client.LoginAsync(TokenType.Bot, config.BotSettings.DiscordToken))
@@ -33,7 +40,7 @@ let main argv =
             let! z = Async.AwaitTask(Task.Delay(Timeout.Infinite))
             return ()
         }
-
+    
     Async.RunSynchronously foo
     
     stuff.run |> ignore

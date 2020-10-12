@@ -18,6 +18,7 @@
     <Compile Include="logger.fs" />
     <Compile Include="Emojis.fs" />
     <Compile Include="CommandFilters\CommandT.fs" />
+    <Compile Include="CommandFilters\discoHelper.fs" />
     <Compile Include="CommandFilters\Creator.fs" />
     <Compile Include="CommandFilters\qBot.fs" />
     <Compile Include="CommandFilters\qHere.fs" />
@@ -31,7 +32,7 @@
     <Compile Include="CommandFilters\qAdd.fs" />
     <Compile Include="CommandFilters\qClose.fs" />
     <Compile Include="CommandFilters\qCustoms.fs" />
-    <Compile Include="CommandService.fs" />
+    <Compile Include="AsyncService.fs" />
     <Compile Include="Scheduler.fs" />
     <Compile Include="Service.fs" />
     <Compile Include="Program.fs" />

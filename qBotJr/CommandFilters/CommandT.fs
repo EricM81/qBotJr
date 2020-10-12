@@ -1,16 +1,43 @@
 ﻿namespace qBotJr
-open Discord.WebSocket
 open System
+open System.Threading.Channels
+open Discord
+open Discord.WebSocket
 
-type Action = SocketMessage -> unit
-
+[<Struct>]
+type UserPermissions = 
+    | None = 0
+    | Captain = 1
+    | Admin = 2
+    | Creator = 3
     
+type UserMessageAction = (SocketMessage) -> unit 
+type PrivilegedMessageAction = (SocketMessage) -> (SocketGuildChannel) -> (SocketGuildUser) -> (UserPermissions) -> unit 
+type UserReactionAction = (Cacheable<IUserMessage, uint64>) -> (ISocketMessageChannel) ->  (IReaction) -> unit
+type ScheduledTask = (int) -> unit
 
+type MessageReaction =
+    {
+    Message : Cacheable<IUserMessage, uint64>
+    Channel : ISocketMessageChannel
+    Reaction : IReaction
+    }
+    static member create msg channel reaction =
+        {Message = msg; Channel = channel; Reaction = reaction}
+
+
+type MailboxMessage =
+    | NewMessage of SocketMessage 
+    | MessageReaction of MessageReaction 
+    | ScheduledTask of ScheduledTask  
+
+
+   
 [<Struct>]
 type ReAction = 
     {
     Emoji : string;
-    Action : Action
+    Action : UserReactionAction
     }
     static member create reaction action =
         {ReAction.Emoji = reaction; Action = action}
@@ -47,12 +74,6 @@ type UserMessageFilter =
     Action : Action
     }
 
-[<Struct>]
-type UserPermissions = 
-    | None = 0
-    | Captain = 1
-    | Admin = 2
-    | Creator = 3
 
 
 //[<Struct>]

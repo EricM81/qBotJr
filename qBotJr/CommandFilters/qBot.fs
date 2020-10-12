@@ -1,6 +1,8 @@
 ﻿namespace qBotJr
+open System.Threading.Channels
 open Discord.WebSocket
 open System
+open discoHelper
 
 module qBot = 
     //qNew <@!442438729207119892>		qNew @QButtsSr
@@ -36,6 +38,12 @@ You can also type a parameter prefix for assistance.  For example calling ""-a""
 //type cmdGuildFunc = (SocketMessage) -> (SocketGuildChannel) -> (SocketGuildUser) -> unit 
 
     let Run (msg : SocketMessage) (channel : SocketGuildChannel) (user : SocketGuildUser) (perm : UserPermissions) : unit =
+        let settings = config.GetGuildSettings channel.Guild.Id
+        let adminRoles = getRolesByIDs channel settings.AdminRoles
+        let captainRoles = getRolesByIDs channel settings.CaptainRoles
+        
+        
+        
         ()
     
     let noPerms (msg : SocketMessage) (channel : SocketGuildChannel) (user : SocketGuildUser) (perm : UserPermissions) : unit =
