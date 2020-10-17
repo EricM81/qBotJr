@@ -47,9 +47,9 @@ module AsyncService =
             else
                 None
 
-        let (|IsRole|_|) (botPerm : UserPermissions) (gUser : SocketGuildUser) = 
+        let (|IsRole|_|) (role : UserPermissions) (gUser : SocketGuildUser) = 
             let roles = 
-                match botPerm with 
+                match role with 
                 | UserPermissions.Admin -> config.GetGuildSettings(gUser.Guild.Id).AdminRoles
                 | UserPermissions.Captain -> config.GetGuildSettings(gUser.Guild.Id).CaptainRoles
                 | _ -> []

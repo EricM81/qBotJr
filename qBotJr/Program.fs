@@ -15,14 +15,26 @@ let clientConfig =
     tmp
 
 let client = new DiscordSocketClient(clientConfig)
-
+let f (x:int list) =
+    for i = 0 to x.Head do
+        printfn "Hello World"
+        x.Head
+        
 [<EntryPoint>]
 let main argv =
-
+    argv.[0] |> System.Int32.Parse |> f
+    Console.WriteLine (argv.[0])
+    f []
+    
+        
     client.add_Log (fun log ->
         logger.WriteLine (sprintf "%s\n%s\n" log.Source log.Message)
         Task.CompletedTask)
-    //client.add_Ready (fun _ -> readyAsync "")
+    
+    client.add_Ready (fun _ ->
+        logger.WriteLine "Ready to receive...\n"
+        Task.CompletedTask)
+    
     client.add_MessageReceived (fun msg ->
         AsyncService.Receive (NewMessage msg)
         )
@@ -43,7 +55,6 @@ let main argv =
     
     Async.RunSynchronously foo
     
-    stuff.run |> ignore
 
 
 
