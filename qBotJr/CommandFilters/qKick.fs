@@ -6,8 +6,10 @@ module qKick =
 
 //type cmdGuildFunc = (SocketMessage) -> (SocketGuildChannel) -> (SocketGuildUser) -> unit 
 
-    let Run (msg : SocketMessage) (channel : SocketGuildChannel) (user : SocketGuildUser) (perm : UserPermissions) : unit =
+    let str = "QKICK"
+
+    let Run  (pm : ParsedMsg) (goo : GuildOO) : unit =
         ()
     
-    let noPerms (msg : SocketMessage) (channel : SocketGuildChannel) (user : SocketGuildUser) (perm : UserPermissions) : unit =
+    let noPerms  (pm : ParsedMsg) (goo : GuildOO) : unit =
         ()

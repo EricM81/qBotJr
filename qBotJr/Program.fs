@@ -35,6 +35,7 @@ let main argv =
         AsyncService.Receive (MessageReaction (MessageReaction.create msg channel reaction))
         )
     //TODO start scheduler
+    //TODO listen for can't connect and disconnects and try agane after one minute
         
      
     let foo = 
@@ -47,7 +48,7 @@ let main argv =
     
     Async.RunSynchronously foo
     
-
+    
 
 
 

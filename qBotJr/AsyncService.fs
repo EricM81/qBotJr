@@ -29,9 +29,10 @@ module AsyncService =
             | Continue y -> f y
             | Completed -> Completed
 
-        let (|StaticCmd|_|) (p : string) (msg : SocketMessage) =
-            if msg.Content.StartsWith(p, StringComparison.OrdinalIgnoreCase) then
-                Some msg
+        let (|ParseMsg|_|) (cmdName : string) (msg : SocketMessage) =
+            if msg.Content.StartsWith(cmdName, StringComparison.OrdinalIgnoreCase) then
+                let args = Interpreter.parseInput cmdName msg.Content
+                ParsedMsg.create msg args |> Some
             else
                 None
 
@@ -47,11 +48,11 @@ module AsyncService =
             else
                 None
 
-        let (|IsRole|_|) (role : UserPermissions) (gUser : SocketGuildUser) = 
+        let (|IsRole|_|) (role : UserPermission) (gUser : SocketGuildUser) = 
             let roles = 
                 match role with 
-                | UserPermissions.Admin -> config.GetGuildSettings(gUser.Guild.Id).AdminRoles
-                | UserPermissions.Captain -> config.GetGuildSettings(gUser.Guild.Id).CaptainRoles
+                | UserPermission.Admin -> config.GetGuildSettings(gUser.Guild.Id).AdminRoles
+                | UserPermission.Captain -> config.GetGuildSettings(gUser.Guild.Id).CaptainRoles
                 | _ -> []
 
             let x = 
@@ -70,29 +71,26 @@ module AsyncService =
             | false -> None
         
        
-        let genericFail (msg : SocketMessage) (channel : SocketGuildChannel) (user : SocketGuildUser) (perm : UserPermissions) : unit =
-            Async.AwaitTask(msg.AddReactionAsync(Emoji(Emojis.Distrust))) |> ignore
+        let genericFail (parsedm : ParsedMsg) (goo : GuildOO) : unit =
+            Async.AwaitTask(parsedm.Message.AddReactionAsync(Emoji(Emojis.Distrust))) |> ignore
 
-        let noPermissions (msg : SocketMessage) (basicFunc : UserMessageAction) : CmdOption<'T> = 
-            basicFunc msg
-            Completed
 
-        let permissionsCheck (minPerm : UserPermissions) (successFunc : PrivilegedMessageAction) (failFunc : PrivilegedMessageAction) (msg : SocketMessage) : CmdOption<'T> =
-            match msg.Author with
+        let permissionsCheck (minPerm : UserPermission) (successFunc : PrivilegedMessageAction) (failFunc : PrivilegedMessageAction) (parsedMsg : ParsedMsg) : CmdOption<'T> =
+            match parsedMsg.Message.Author with
             | :? SocketGuildUser as gUser  ->
-                match msg.Channel with
+                match parsedMsg.Message.Channel with
                 | :? SocketGuildChannel as gChannel ->
                     let perm = 
                         match gUser with 
-                        | IsCreator x -> UserPermissions.Creator
-                        | IsAdmin x -> UserPermissions.Admin
-                        | IsRole UserPermissions.Admin x -> UserPermissions.Admin
-                        | IsRole UserPermissions.Captain x -> UserPermissions.Captain
-                        | _ -> UserPermissions.None
+                        | IsCreator x -> UserPermission.Creator
+                        | IsAdmin x -> UserPermission.Admin
+                        | IsRole UserPermission.Admin x -> UserPermission.Admin
+                        | IsRole UserPermission.Captain x -> UserPermission.Captain
+                        | _ -> UserPermission.None
                     if perm >= minPerm then 
-                        successFunc msg gChannel gUser perm
+                        GuildOO.create gChannel gUser perm |> successFunc parsedMsg  
                     else 
-                        failFunc msg gChannel gUser perm 
+                        GuildOO.create gChannel gUser perm |> failFunc parsedMsg
 
                     Completed
 
@@ -106,30 +104,30 @@ module AsyncService =
             if (q = 'Q' || q = 'q') then 
                 
                 match msg with 
-                | StaticCmd "QBOT" msg -> 
-                    permissionsCheck UserPermissions.Admin qBot.Run genericFail msg 
-                | StaticCmd "QHERE" msg -> 
-                    permissionsCheck UserPermissions.Admin qHere.Run genericFail msg
-                | StaticCmd "QNEW" msg -> 
-                    permissionsCheck UserPermissions.Admin qNew.Run genericFail msg
-                | StaticCmd "QGAMEMODE" msg -> 
-                    permissionsCheck UserPermissions.Admin qGameMode.Run genericFail msg
-                | StaticCmd "QSET" msg -> 
-                    permissionsCheck UserPermissions.Admin qSet.Run genericFail msg
-                | StaticCmd "QNEXT" msg -> 
-                    permissionsCheck UserPermissions.Admin qNext.Run genericFail msg
-                | StaticCmd "QAFK" msg -> 
-                    permissionsCheck UserPermissions.Captain qAFK.Run genericFail msg
-                | StaticCmd "QBAN" msg -> 
-                    permissionsCheck UserPermissions.Captain qBan.Run genericFail msg
-                | StaticCmd "QKICK" msg -> 
-                    permissionsCheck UserPermissions.Captain qKick.Run genericFail msg
-                | StaticCmd "QADD" msg -> 
-                    permissionsCheck UserPermissions.Captain qAdd.Run genericFail msg
-                | StaticCmd "QCLOSE" msg -> 
-                    permissionsCheck UserPermissions.Captain qClose.Run genericFail msg
-                | StaticCmd "QCUSTOMS" msg -> 
-                    permissionsCheck UserPermissions.None qCustoms.Run genericFail msg
+                | ParseMsg qBot.str args -> 
+                    permissionsCheck UserPermission.Admin qBot.Run genericFail args
+                | ParseMsg qHere.str args -> 
+                    permissionsCheck UserPermission.Admin qHere.Run genericFail args
+                | ParseMsg qNew.str args -> 
+                    permissionsCheck UserPermission.Admin qNew.Run genericFail args
+                | ParseMsg qMode.str args -> 
+                    permissionsCheck UserPermission.Admin qMode.Run genericFail args
+                | ParseMsg qSet.str args -> 
+                    permissionsCheck UserPermission.Admin qSet.Run genericFail args
+                | ParseMsg qNext.str args -> 
+                    permissionsCheck UserPermission.Admin qNext.Run genericFail args
+                | ParseMsg qAFK.str args -> 
+                    permissionsCheck UserPermission.Captain qAFK.Run genericFail args
+                | ParseMsg qBan.str args -> 
+                    permissionsCheck UserPermission.Captain qBan.Run genericFail args
+                | ParseMsg qKick.str args -> 
+                    permissionsCheck UserPermission.Captain qKick.Run genericFail args
+                | ParseMsg qAdd.str args -> 
+                    permissionsCheck UserPermission.Captain qAdd.Run genericFail args
+                | ParseMsg qClose.str args -> 
+                    permissionsCheck UserPermission.Captain qClose.Run genericFail args
+                | ParseMsg qCustoms.str args -> 
+                    permissionsCheck UserPermission.None qCustoms.Run genericFail args
                 | _ -> Continue msg
             else
                 Continue msg
@@ -142,8 +140,8 @@ module AsyncService =
         //cmds I can run for testing....or memeing
         let filterCreatorCommands (msg : SocketMessage) : CmdOption<SocketMessage> =
             match msg with
-            | StaticCmd "HI JR" msg ->
-                permissionsCheck UserPermissions.Creator Creator.RunHiJr genericFail msg
+            | ParseMsg "HI JR" args ->
+                permissionsCheck UserPermission.Creator Creator.RunHiJr genericFail args
             
             |_ -> Continue msg
 

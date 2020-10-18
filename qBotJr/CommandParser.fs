@@ -10,20 +10,7 @@ open System
 //        let s6 = @"-a word1"
 //        let s7 = @"-a ""word1 word2"""
 
-type CommandLineArg =
-    {
-    Switch : char option
-    Values : string list
-    }
-    static member create prefix values =
-        {Switch = prefix; Values = values}
-type Command =
-    {
-    Name : string
-    Arguments : CommandLineArg list
-    }
-    static member create name args =
-        {Name = name; Arguments = args}
+
 
 module Interpreter = 
     module private _interpreter =
@@ -68,7 +55,7 @@ module Interpreter =
         let takeOne (input : string) (pos : int) (len : int) : char option =
             if (pos < len) then Some input.[pos] else None
             
-        let rec parseArgs (input : string) (pos : int) (len : int) (acc : CommandLineArg list) : int * CommandLineArg list = 
+        let rec parseArgs (input : string) (pos : int) (len : int) (acc : CommandLineArgs list) : int * CommandLineArgs list = 
             let x = if (pos < len) then input.[pos] else '\000'
             match x with
             | '\000' -> //end of string
@@ -76,15 +63,15 @@ module Interpreter =
             | '-' -> //switch followed by list of values
                     let switch = takeOne input (pos + 1) len
                     let (pos', values) = parseValues input (pos + 2) len []
-                    parseArgs input pos' len ((CommandLineArg.create switch values)::acc)
+                    parseArgs input pos' len ((CommandLineArgs.create switch values)::acc)
             | ' ' -> //skip blank spaces
                     parseArgs input (pos + 1) len acc 
             | x -> //default values not preceded by a -switch
                     let (pos', values) = parseValues input pos len []
-                    parseArgs input pos' len ((CommandLineArg.create None values)::acc)
+                    parseArgs input pos' len ((CommandLineArgs.create None values)::acc)
                     
-    let rec parseInput (cmd : string) (input : string) : Command =
+    let rec parseInput (cmd : string) (input : string) : CommandLineArgs list =
         let (x, args) = _interpreter.parseArgs input cmd.Length input.Length []
-        Command.create cmd args
+        args
         
         

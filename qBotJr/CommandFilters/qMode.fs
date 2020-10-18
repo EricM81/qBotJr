@@ -2,12 +2,12 @@
 open Discord.WebSocket
 open System
 
-module qAdd = 
+module qMode = 
 
 //type cmdGuildFunc = (SocketMessage) -> (SocketGuildChannel) -> (SocketGuildUser) -> unit 
 
-    let str = "QADD"
-
+    let str = "QMODE"
+  
     let Run  (pm : ParsedMsg) (goo : GuildOO) : unit =
         ()
     

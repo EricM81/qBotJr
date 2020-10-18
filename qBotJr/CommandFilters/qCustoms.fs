@@ -6,11 +6,10 @@ module qCustoms =
 
 //type cmdGuildFunc = (SocketMessage) -> (SocketGuildChannel) -> (SocketGuildUser) -> unit 
 
-    let Run (msg : SocketMessage) (channel : SocketGuildChannel) (user : SocketGuildUser) (perm : UserPermissions) : unit =
-        let x = 0
-        x |> ignore
+    let str = "QCUSTOMS"
+
+    let Run  (pm : ParsedMsg) (goo : GuildOO) : unit =
         ()
-        
     
-    let noPerms (msg : SocketMessage) (channel : SocketGuildChannel) (user : SocketGuildUser) (perm : UserPermissions) : unit =
+    let noPerms  (pm : ParsedMsg) (goo : GuildOO) : unit =
         ()

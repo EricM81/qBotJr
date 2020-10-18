@@ -6,9 +6,10 @@ module qNext =
 //https://www.google.com/search?q=time+zone
     
 //type cmdGuildFunc = (SocketMessage) -> (SocketGuildChannel) -> (SocketGuildUser) -> unit 
+    let str = "QNEXT"
 
-    let Run (msg : SocketMessage) (channel : SocketGuildChannel) (user : SocketGuildUser) (perm : UserPermissions) : unit =
+    let Run  (pm : ParsedMsg) (goo : GuildOO) : unit =
         ()
     
-    let noPerms (msg : SocketMessage) (channel : SocketGuildChannel) (user : SocketGuildUser) (perm : UserPermissions) : unit =
+    let noPerms  (pm : ParsedMsg) (goo : GuildOO) : unit =
         ()

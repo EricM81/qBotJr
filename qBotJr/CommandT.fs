@@ -4,15 +4,53 @@ open System.Threading.Channels
 open Discord
 open Discord.WebSocket
 
+
 [<Struct>]
-type UserPermissions = 
+type UserPermission = 
     | None = 0
     | Captain = 1
     | Admin = 2
     | Creator = 3
     
-type UserMessageAction = (SocketMessage) -> unit 
-type PrivilegedMessageAction = (SocketMessage) -> (SocketGuildChannel) -> (SocketGuildUser) -> (UserPermissions) -> unit 
+    
+[<Struct>]
+type CommandLineArgs =
+    {
+    Switch : char option
+    Values : string list
+    }
+    static member create prefix values =
+        {Switch = prefix; Values = values}
+
+//[<Struct>]
+//type CommandLineArgs =
+//    {
+//    Name : string
+//    Arguments : CommandLineOption list
+//    }
+//    static member create name args =
+//        {Name = name; Arguments = args} 
+
+[<Struct>]
+type ParsedMsg =
+    {
+    Message : SocketMessage
+    ParsedArgs : CommandLineArgs list
+    }
+    static member create msg pArgs =
+        {Message = msg; ParsedArgs = pArgs}
+
+[<Struct>]
+type GuildOO =
+    {
+    Channel : SocketGuildChannel
+    User : SocketGuildUser
+    UserPerms : UserPermission
+    }
+    static member create channel user perms =
+        {Channel = channel; User = user; UserPerms = perms}
+type UserMessageAction = ParsedMsg -> unit 
+type PrivilegedMessageAction = ParsedMsg -> GuildOO -> unit 
 type UserReactionAction = (Cacheable<IUserMessage, uint64>) -> (ISocketMessageChannel) ->  (IReaction) -> unit
 type ScheduledTask = (int) -> unit
 

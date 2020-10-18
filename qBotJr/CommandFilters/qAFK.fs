@@ -6,9 +6,10 @@ module qAFK =
 
 //type cmdGuildFunc = (SocketMessage) -> (SocketGuildChannel) -> (SocketGuildUser) -> unit 
 
-    let Run (msg : SocketMessage) (channel : SocketGuildChannel) (user : SocketGuildUser) (perm : UserPermissions) : unit =
-        msg.Channel.SendMessageAsync(sprintf "Hi %s!!" user.Nickname)
-        |> ignore
+    let str = "QAFK"
+
+    let Run  (pm : ParsedMsg) (goo : GuildOO) : unit =
+        ()
     
-    let noPerms (msg : SocketMessage) (channel : SocketGuildChannel) (user : SocketGuildUser) (perm : UserPermissions) : unit =
+    let noPerms  (pm : ParsedMsg) (goo : GuildOO) : unit =
         ()

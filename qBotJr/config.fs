@@ -1,14 +1,12 @@
 ﻿namespace qBotJr
+open System.Dynamic
 open System.IO
 open Newtonsoft.Json
 open System.Collections.Generic
 
 
-[<Struct>]
-type DiscordEntity = {
-    ID : uint64 ;
-    Name : string
-    }
+
+
 
 [<Struct>]
 type BotSettings = {
@@ -46,11 +44,15 @@ type config() =
         else
             GuildSettings.defaultGuild guildID
 
-    static let saveGuild (guildSettings : GuildSettings) = 
+    static let saveGuild (guildSettings : GuildSettings) =
+        let format = Newtonsoft.Json.Formatting.Indented
+        
         let fileName = (sprintf "%s%u.json" config.BotSettings.GuildSettingsRoot guildSettings.GuildID)
         use f = File.Open(fileName, FileMode.OpenOrCreate, FileAccess.Write)
+        f.SetLength(0L)
+        f.Flush()
         use sw = new StreamWriter(f)
-        guildSettings |> JsonConvert.SerializeObject |> sw.Write
+        JsonConvert.SerializeObject(guildSettings, format) |> sw.Write
         sw.Flush()
         sw.Close()
 
