@@ -1,6 +1,8 @@
 ﻿namespace qBotJr
 open Discord.WebSocket
 open System
+open qBotJr.T
+
 
 module qNew = 
 

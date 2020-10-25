@@ -1,6 +1,7 @@
 ﻿namespace qBotJr
 open Discord.WebSocket
 open System
+open qBotJr.T
 
 module qNext = 
 //https://www.google.com/search?q=time+zone

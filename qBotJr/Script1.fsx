@@ -245,4 +245,14 @@ let test iter =
 //    //cmd = "qBot"
 //    //can be followed by value or a switch " -x" for options or nothing for interactive options
 //    parseValueOrSwitch input cmd.Length input.Length 
-//    
+//
+
+
+let check1 (b : bool) =
+    printfn "ran"
+    not b
+
+let x b =
+    if (check1 b = true) && (check1 b = true) then "yes" else "No"
+
+x false

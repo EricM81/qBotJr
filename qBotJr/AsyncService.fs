@@ -1,14 +1,18 @@
 ﻿namespace qBotJr
-
+open System.Collections.Generic
 open Discord
 open Discord.WebSocket
 open System
 open System.Threading.Tasks
+open qBotJr.T
 
 //Async MailboxProcessor wrapper to accept Post commands
 module AsyncService =
     //thread safe, internal handler for messages from MailboxProcessor.Receive() 
     module private _command =
+        
+        let mutable msgF : MessageFilter list = []
+        let mutable reactionF : ReactionFilter list = []
         
         //I'm not sure if resulting workflow steps should be asynchronous.
         //The Discord.NET wrapper already handles all network communication asynchronously.
@@ -29,10 +33,16 @@ module AsyncService =
             | Continue y -> f y
             | Completed -> Completed
 
-        let (|ParseMsg|_|) (cmdName : string) (msg : SocketMessage) =
-            if msg.Content.StartsWith(cmdName, StringComparison.OrdinalIgnoreCase) then
-                let args = Interpreter.parseInput cmdName msg.Content
-                ParsedMsg.create msg args |> Some
+        let inline matchPrefix (prefix : string) (msg : SocketMessage) : bool =
+            if msg.Content.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) then true else false
+                        
+        let inline parseMsg (cmd : Command) (msg : SocketMessage) =
+            Interpreter.parseInput cmd.Prefix msg.Content
+            |> ParsedMsg.create msg
+            
+        let (|ParseMsg|_|) (cmd : Command) (msg : SocketMessage) =
+            if matchPrefix cmd.Prefix msg then 
+                parseMsg cmd msg |> Some
             else
                 None
 
@@ -69,13 +79,10 @@ module AsyncService =
             match x with 
             | true -> Some gUser
             | false -> None
-        
        
-        let genericFail (parsedm : ParsedMsg) (goo : GuildOO) : unit =
-            Async.AwaitTask(parsedm.Message.AddReactionAsync(Emoji(Emojis.Distrust))) |> ignore
+       
 
-
-        let permissionsCheck (minPerm : UserPermission) (successFunc : PrivilegedMessageAction) (failFunc : PrivilegedMessageAction) (parsedMsg : ParsedMsg) : CmdOption<'T> =
+        let permissionsCheck (cmd : Command) (parsedMsg : ParsedMsg) : CmdOption<'T> =
             match parsedMsg.Message.Author with
             | :? SocketGuildUser as gUser  ->
                 match parsedMsg.Message.Channel with
@@ -87,10 +94,10 @@ module AsyncService =
                         | IsRole UserPermission.Admin x -> UserPermission.Admin
                         | IsRole UserPermission.Captain x -> UserPermission.Captain
                         | _ -> UserPermission.None
-                    if perm >= minPerm then 
-                        GuildOO.create gChannel gUser perm |> successFunc parsedMsg  
+                    if perm >= cmd.RequiredPerm then 
+                        GuildOO.create gChannel.Guild gChannel gUser perm |> cmd.PermSuccess parsedMsg  
                     else 
-                        GuildOO.create gChannel gUser perm |> failFunc parsedMsg
+                        GuildOO.create gChannel.Guild gChannel gUser perm |> cmd.PermFailure parsedMsg
 
                     Completed
 
@@ -104,38 +111,66 @@ module AsyncService =
             if (q = 'Q' || q = 'q') then 
                 
                 match msg with 
-                | ParseMsg qBot.str args -> 
-                    permissionsCheck UserPermission.Admin qBot.Run genericFail args
-                | ParseMsg qHere.str args -> 
-                    permissionsCheck UserPermission.Admin qHere.Run genericFail args
-                | ParseMsg qNew.str args -> 
-                    permissionsCheck UserPermission.Admin qNew.Run genericFail args
-                | ParseMsg qMode.str args -> 
-                    permissionsCheck UserPermission.Admin qMode.Run genericFail args
-                | ParseMsg qSet.str args -> 
-                    permissionsCheck UserPermission.Admin qSet.Run genericFail args
-                | ParseMsg qNext.str args -> 
-                    permissionsCheck UserPermission.Admin qNext.Run genericFail args
-                | ParseMsg qAFK.str args -> 
-                    permissionsCheck UserPermission.Captain qAFK.Run genericFail args
-                | ParseMsg qBan.str args -> 
-                    permissionsCheck UserPermission.Captain qBan.Run genericFail args
-                | ParseMsg qKick.str args -> 
-                    permissionsCheck UserPermission.Captain qKick.Run genericFail args
-                | ParseMsg qAdd.str args -> 
-                    permissionsCheck UserPermission.Captain qAdd.Run genericFail args
-                | ParseMsg qClose.str args -> 
-                    permissionsCheck UserPermission.Captain qClose.Run genericFail args
-                | ParseMsg qCustoms.str args -> 
-                    permissionsCheck UserPermission.None qCustoms.Run genericFail args
+//                | ParseMsg qBot.str args -> 
+//                    permissionsCheck UserPermission.Admin qBot.Run genericFail args
+                | ParseMsg qHere.Command args -> 
+                    permissionsCheck qHere.Command args
+//                | ParseMsg qNew.str args -> 
+//                    permissionsCheck UserPermission.Admin qNew.Run genericFail args
+//                | ParseMsg qMode.str args -> 
+//                    permissionsCheck UserPermission.Admin qMode.Run genericFail args
+//                | ParseMsg qSet.str args -> 
+//                    permissionsCheck UserPermission.Admin qSet.Run genericFail args
+//                | ParseMsg qNext.str args -> 
+//                    permissionsCheck UserPermission.Admin qNext.Run genericFail args
+//                | ParseMsg qAFK.str args -> 
+//                    permissionsCheck UserPermission.Captain qAFK.Run genericFail args
+//                | ParseMsg qBan.str args -> 
+//                    permissionsCheck UserPermission.Captain qBan.Run genericFail args
+//                | ParseMsg qKick.str args -> 
+//                    permissionsCheck UserPermission.Captain qKick.Run genericFail args
+//                | ParseMsg qAdd.str args -> 
+//                    permissionsCheck UserPermission.Captain qAdd.Run genericFail args
+//                | ParseMsg qClose.str args -> 
+//                    permissionsCheck UserPermission.Captain qClose.Run genericFail args
+//                | ParseMsg qCustoms.str args -> 
+//                    permissionsCheck UserPermission.None qCustoms.Run genericFail args
                 | _ -> Continue msg
             else
                 Continue msg
         
+        let inline matchMessage (msg : SocketMessage) (cmd: Command) : CmdOption<'T> =
+            match msg with
+            | ParseMsg cmd args ->
+                permissionsCheck cmd args
+            | _ -> Continue msg
+           
         let filterDynamicCommands (msg : SocketMessage) : CmdOption<SocketMessage> =
-            //looking for a response to a request.  
-            //all authentication needs to be done on the request
-            Continue msg
+            let rec findMatch (xs : MessageFilter list) : CmdOption<SocketMessage> =
+                //goo upfront
+                
+                match xs with
+                | [] -> Continue msg
+                | x::xs when x.TTL > msg.CreatedAt -> 
+                
+                    let cmds =
+                        match x.User with
+                        | Some u when u = msg.Author.Id -> x.Items  
+                        | _ -> x.Items
+                    
+                    
+                    match result with
+                    | 
+    //
+    
+    
+    // if isMatch then
+//                        permissionsCheck UserPermission.None action genericFail args
+//                    else
+//                        findMatch xs
+                        
+            findMatch msgF    
+            
 
         //cmds I can run for testing....or memeing
         let filterCreatorCommands (msg : SocketMessage) : CmdOption<SocketMessage> =
@@ -148,19 +183,33 @@ module AsyncService =
         let filterGuildDynamicCommands (msg : SocketMessage) : CmdOption<SocketMessage> =
             Completed
 
-        let processMsg (inbox: MailboxProcessor<MailboxMessage>) = 
+        let processMail (inbox: MailboxProcessor<MailboxMessage>) = 
             let rec msgLoop() = 
                 async{
                     let! mm = inbox.Receive()
                     match mm with
                     | NewMessage nm ->
+                        
+                        //Important:  Discord.NET uses a lot of type and interface casting.
+                        //If the SocketChannel successfully casts to a SocketGuildChannel then all
+                        //other castings will succeed.        
+
+                        match nm.Channel with
+                        | :? SocketGuildChannel as gChannel ->
+                            
+                            
                         Continue nm
                         |> bind filterStaticCommands
                         |> bind filterCreatorCommands 
                         |> bind filterDynamicCommands
                         |> ignore
-                    | MessageReaction mr -> 
+                    | MessageReaction mr ->
+                        
                         () //todo - message reaction filter
+                    | MessageFilter mf ->
+                        msgF <- mf::msgF
+                    | ReactionFilter rf ->
+                        reactionF <- rf::reactionF
                     | ScheduledTask t ->
                         () //TODO - task scheduler
                     return! msgLoop()
@@ -168,7 +217,7 @@ module AsyncService =
             msgLoop()
 
         
-        let agent = MailboxProcessor.Start(processMsg)
+        let agent = MailboxProcessor.Start(processMail)
         
 
     //once a message is handled, it returns 

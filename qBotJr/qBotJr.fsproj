@@ -14,10 +14,13 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="App.config" />
+    <Compile Include="Types\ConfigT.fs" />
+    <Compile Include="Types\ServiceT.fs" />
+    <Compile Include="Types\CommandT.fs" />
     <Compile Include="config.fs" />
     <Compile Include="logger.fs" />
     <Compile Include="Emojis.fs" />
-    <Compile Include="CommandT.fs" />
+    <Compile Include="DiscordHelper.fs" />
     <Compile Include="CommandParser.fs" />
     <Compile Include="CommandFilters\discoHelper.fs" />
     <Compile Include="CommandFilters\Creator.fs" />

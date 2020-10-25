@@ -1,6 +1,8 @@
 ﻿namespace qBotJr
 
 open System
+open qBotJr.T
+
 //test cases:
 //        let s1 = @"commandWord -a ""multi word string1"" word1 word2 ""multi string2"" -b ""multi string3"" -c word3"
 //        let s2 = @"commandWord 9 -a ""multi word string1"" word1 w ""multi string2"" -b ""multi string3"" -c ""3"""
@@ -52,8 +54,8 @@ module Interpreter =
                     
             
             
-        let takeOne (input : string) (pos : int) (len : int) : char option =
-            if (pos < len) then Some input.[pos] else None
+        let takeSwitchToUpper (input : string) (pos : int) (len : int) : char option =
+            if (pos < len) then  input.[pos] |> Char.ToUpper |> Some else None
             
         let rec parseArgs (input : string) (pos : int) (len : int) (acc : CommandLineArgs list) : int * CommandLineArgs list = 
             let x = if (pos < len) then input.[pos] else '\000'
@@ -61,7 +63,7 @@ module Interpreter =
             | '\000' -> //end of string
                     pos, List.rev acc 
             | '-' -> //switch followed by list of values
-                    let switch = takeOne input (pos + 1) len
+                    let switch = takeSwitchToUpper input (pos + 1) len
                     let (pos', values) = parseValues input (pos + 2) len []
                     parseArgs input pos' len ((CommandLineArgs.create switch values)::acc)
             | ' ' -> //skip blank spaces

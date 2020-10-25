@@ -2,7 +2,8 @@
 open System.Threading.Channels
 open Discord.WebSocket
 open System
-open discoHelper
+open DiscordHelper
+open qBotJr.T
 
 module qBot = 
    
