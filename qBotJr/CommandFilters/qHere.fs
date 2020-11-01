@@ -26,12 +26,28 @@ module qHere =
         if cfg.AnnounceChannel <> channelID then
             {cfg with AnnounceChannel = channelID} |> config.SetGuildSettings
             
-    
+    let printAnnouncement (ping : PingType) (players : Player list) : string =
+        let sb = new StringBuilder()
+        let a format = DiscordHelper.bprintfn sb format
+        
+        DiscordHelper.pingToString ping
+        |> a "%s" 
+        a ">>>React here with %s to join the queue!" Emojis.RaiseHands
+        a ""
+        a "You will get a ping in a new channel, made just for players in your match. You only have a few minutes to join before getting marked as afk, so please watch for the ping!"
+        a ""
+        a "**Please, Un-React to the message if you step away!**"
+        a "```You won't lose your place in line."
+        a "I'll just skip you until you react agane!```"
+        a ""
+        
+        sb.ToString()
+        
     let printMan (channelID : uint64 option) : string =
         let channel = DiscordHelper.getChannelByID channelID
 
         let sb = new StringBuilder()
-        let a format = Printf.kprintf (fun s -> sb.AppendLine s |> ignore) format
+        let a format = DiscordHelper.bprintfn sb format
         
         
         a ">>> __Post a message to a channel (-a) and ping @ everyone (-e), @ here (-h), or no one (-n).__"
@@ -66,10 +82,10 @@ module qHere =
         sb.ToString()
         
     let postMan (goo : GuildOO) (param : qHereParameters) =
-        DiscordHelper.sendMsg goo.Channel (printMan param.Announcements)
-        
-    let postAnnouncement (ping : PingType) (channelID : uint64) =
-        
+        DiscordHelper.sendMsg goo.Channel (printMan param.Announcements) |> ignore
+
+    let postAnnouncement (goo : GuildOO) (ping : PingType) (channelID : uint64) =
+        let toChannel = DiscordHelper.getChannelByID (Some channelID)
         ()
         
     let rec checkParams (xs : CommandLineArgs list) (prev : qHereParameters) : qHereParameters =
@@ -112,9 +128,9 @@ module qHere =
         
         match param with
         | { Ping = Some p; Announcements = Some a} ->
-            postAnnouncement p a
+            postAnnouncement goo p a
         | { Ping = p; Announcements = a } ->
-            postMan goo param
+            postMan goo param |> ignore
             
             //TODO register dynamic listener
             

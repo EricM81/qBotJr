@@ -1,5 +1,6 @@
 ﻿namespace qBotJr
 
+open System.Text
 open System.Threading.Tasks.Sources
 open Discord
 open Discord.WebSocket
@@ -58,14 +59,16 @@ module DiscordHelper =
         //TODO: change all let -> let!
         let foo = 
             async{
-                let x = Async.AwaitTask(helper.client.LoginAsync(TokenType.Bot, config.BotSettings.DiscordToken))
-                let y = Async.AwaitTask(helper.client.StartAsync())
-                let! z = Async.AwaitTask(Task.Delay(Timeout.Infinite))
+                Async.AwaitTask(helper.client.LoginAsync(TokenType.Bot, config.BotSettings.DiscordToken))
+                |> ignore
+                Async.AwaitTask(helper.client.StartAsync())
+                |> ignore
+                do! Async.AwaitTask(Task.Delay(Timeout.Infinite))
                 return ()
             }
         
         Async.RunSynchronously foo
-    
+  
     let parseDiscoUser (name : string) : uint64 option =
         let prefix = "<@!"
         let suffix = '>'
@@ -116,17 +119,23 @@ module DiscordHelper =
         guild.Channels |> Seq.tryFind (fun y -> y.Name = name)
         
     let sendMsg (channel : SocketChannel) (msg : string) =
-        let iChannel = channel :> IChannel
-        match iChannel with
-        | :? ISocketMessageChannel as x ->
-            x.SendMessageAsync(msg)
-            |> Async.AwaitTask
-            |> ignore
-        |_ -> ()
-         
+        match channel with
+        | :? SocketTextChannel as x -> x.SendMessageAsync msg |> Some
+        | _ -> None
+            
     let reactDistrust (parsedM : ParsedMsg) (goo : GuildOO) : unit =
         Emojis.Distrust
         |> Emoji
         |> parsedM.Message.AddReactionAsync
         |> Async.AwaitTask
         |> ignore
+        
+    let pingToString (p : PingType) =
+        match p with
+        | PingType.Everyone -> "@everyone"
+        | PingType.Here -> "@here"
+        | PingType.NoOne -> ""
+    
+    let bprintfn (sb : StringBuilder) =
+        Printf.kprintf (fun s -> sb.AppendLine s |> ignore)
+        

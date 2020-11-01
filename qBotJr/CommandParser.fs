@@ -68,12 +68,12 @@ module Interpreter =
                     parseArgs input pos' len ((CommandLineArgs.create switch values)::acc)
             | ' ' -> //skip blank spaces
                     parseArgs input (pos + 1) len acc 
-            | x -> //default values not preceded by a -switch
+            | _ -> //default values not preceded by a -switch
                     let (pos', values) = parseValues input pos len []
                     parseArgs input pos' len ((CommandLineArgs.create None values)::acc)
                     
     let rec parseInput (cmd : string) (input : string) : CommandLineArgs list =
-        let (x, args) = _interpreter.parseArgs input cmd.Length input.Length []
+        let (_, args) = _interpreter.parseArgs input cmd.Length input.Length []
         args
         
         

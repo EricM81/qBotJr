@@ -7,7 +7,7 @@ open qBotJr
 
         
 [<EntryPoint>]
-let main (argv: string []): int =
+let main (_: string []): int =
 
    DiscordHelper.initializeClient AsyncService.Receive
    DiscordHelper.startClient

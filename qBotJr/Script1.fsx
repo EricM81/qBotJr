@@ -1,11 +1,12 @@
 ﻿open System.Xml.Schema
+open System
 
 #load @".paket\load\netcoreapp3.1\main.group.fsx"
 #r @"C:\Program Files\dotnet\packs\Microsoft.NETCore.App.Ref\3.1.0\ref\netcoreapp3.1\System.Collections.Specialized.dll"
 
 open Newtonsoft.Json
 open System
-open System.IO
+open System.Text
 open System.Text
 open Newtonsoft.Json
 
@@ -256,3 +257,45 @@ let x b =
     if (check1 b = true) && (check1 b = true) then "yes" else "No"
 
 x false
+
+
+module helper =
+    let kprintfn (sb : StringBuilder) =
+        Printf.kprintf (fun s -> sb.AppendLine s |> ignore)
+    
+
+module Command =
+    
+    let printMan (arg: string): string =
+        let sb = StringBuilder()
+        let a format = helper.kprintfn sb format
+        
+        a "Title"
+        a ""
+        a "body1 %s" arg
+        a ""
+        a "body2"
+        a ""
+        a "footer"
+        
+        sb.ToString()
+        
+test.printMan "test"
+
+let x = new Random()
+let y() = x.Next()
+
+
+y()
+y()
+y()
+
+type state() =
+    static let x = new Random()
+    static member y with get() = x.Next()
+    
+printfn "%i" state.y
+printfn "%i" state.y
+printfn "%i" state.y
+printfn "%i" state.y
+    

@@ -9,7 +9,7 @@ open qBotJr.T
 
 type config() = 
 
-    static let guilds = new Dictionary<uint64, GuildSettings>()
+    static  let  guilds =  Dictionary<uint64, GuildSettings>()
 
     static let loadGuild (guildID : uint64) : GuildSettings = 
         let fileName = (sprintf "%s%u.json" config.BotSettings.GuildSettingsRoot guildID)
@@ -24,7 +24,7 @@ type config() =
             GuildSettings.defaultGuild guildID
 
     static let saveGuild (guildSettings : GuildSettings) =
-        let format = Newtonsoft.Json.Formatting.Indented
+        let format = Formatting.Indented
         
         let fileName = (sprintf "%s%u.json" config.BotSettings.GuildSettingsRoot guildSettings.GuildID)
         use f = File.Open(fileName, FileMode.OpenOrCreate, FileAccess.Write)

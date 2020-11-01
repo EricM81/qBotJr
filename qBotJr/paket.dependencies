@@ -5,6 +5,7 @@ group Main
 	storage: none
 	framework: netcoreapp3.1
 	nuget Discord.Net 
+    nuget FSharp.Control.AsyncSeq
 	nuget FSharp.Core 
 	nuget Microsoft.Extensions.Configuration 
 	nuget Newtonsoft.Json

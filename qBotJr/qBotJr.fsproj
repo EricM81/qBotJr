@@ -22,6 +22,7 @@
     <Compile Include="Emojis.fs" />
     <Compile Include="DiscordHelper.fs" />
     <Compile Include="CommandParser.fs" />
+    <Compile Include="State.fs" />
     <Compile Include="CommandFilters\discoHelper.fs" />
     <Compile Include="CommandFilters\Creator.fs" />
     <Compile Include="CommandFilters\qBot.fs" />
@@ -43,6 +44,8 @@
     <None Include="Script1.fsx" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="FSharp.Control.AsyncSeq" Version="3.0.2" />
+    <PackageReference Include="FSharpx.Async" Version="1.14.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.8" />
   </ItemGroup>
   <Import Project=".paket\Paket.Restore.targets" />

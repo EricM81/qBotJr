@@ -1,12 +1,11 @@
 ﻿namespace qBotJr.T
 open System
-open System.Threading.Channels
 open Discord
 open Discord.WebSocket
 
-
+//
 //Mailbox Types
-
+//
 type NewMessage = SocketMessage
 
 [<Struct>]    
@@ -19,16 +18,9 @@ type MessageReaction =
     static member create msg channel reaction =
         {MessageReaction.Message = msg; Channel = channel; Reaction = reaction}
 
-//TODO scheduled task definition
-type ScheduledTask =
-    {
-    x : int        
-    }
-    
-
-        
-
+//
 //New Message Types
+//
 [<Struct>]
 type UserPermission = 
     | None = 0
@@ -42,9 +34,8 @@ type CommandLineArgs =
     Switch : char option
     Values : string list
     }
-    static member create prefix values =
-        {Switch = prefix; Values = values}
-
+    static member create switch values =
+        {Switch = switch; Values = values}
 
 [<Struct>]
 type ParsedMsg =
@@ -55,7 +46,6 @@ type ParsedMsg =
     }
     static member create  msg pArgs =
         {ParsedMsg.Message = msg; ParsedArgs = pArgs}       
-    
 
 [<Struct>]
 type GuildOO =
@@ -67,20 +57,16 @@ type GuildOO =
     static member create guild channel user  =
         {Guild = guild;Channel = channel; User = user}
  
-
- 
+// 
 //partial application types
-        
+//
 type MessageAction = ParsedMsg -> unit 
 type GuildMessageAction = ParsedMsg -> GuildOO -> unit 
 type ReactionAction = MessageReaction -> unit
-type TaskAction = DateTime -> unit
+type ScheduledTask = unit -> unit
 
-
-
-
-//Dynamic filters and their partial applications
-   
+//
+//Dynamic filters and their partial applications   
 [<Struct>]
 type ReAction = 
     {
@@ -96,7 +82,7 @@ type ByReaction =
     MsgID : uint64;
     Actions : ReAction list;
     }
-    static member create (guildID, msgID, reactions) =
+    static member create (msgID, reactions) =
         {ByReaction.MsgID = msgID; Actions = reactions}
 
 [<Struct>]
@@ -109,7 +95,6 @@ type ByReactionAndUser =
      } 
     static member create (msgID, userID, reactions) = 
         {ByReactionAndUser.MsgID = msgID; UserID = userID; Actions = reactions}
-        
          
 [<Struct>]
 type ReactionFilterChoice =
@@ -120,7 +105,7 @@ type ReactionFilterChoice =
 type ReactionFilter =
     {
     GuildID : uint64
-    mutable TTL : DateTime
+    mutable TTL : DateTimeOffset
     Item : ReactionFilterChoice
     }
     static member create guild ttl item =
@@ -137,7 +122,6 @@ type Command =
     static member create prefix perm success failure =
         {Prefix = prefix; RequiredPerm = perm; PermSuccess = success; PermFailure = failure}
 
-[<Struct>]
 type MessageFilter =
     {
     GuildID : uint64
@@ -161,10 +145,10 @@ type MailboxMessage =
         MessageReaction (MessageReaction.create msg channel reaction)
     static member createMessageFilter guild ttl perms item : MailboxMessage =
         MessageFilter (MessageFilter.create  guild ttl perms item )
-     static member createReactionFilter guild ttl item : MailboxMessage =
+    static member createReactionFilter guild ttl item : MailboxMessage =
         ReactionFilter (ReactionFilter.create guild ttl item)
     static member createTask i : MailboxMessage =
-        ScheduledTask {ScheduledTask.x = i}
+        ScheduledTask i
         
 //[<Struct>]
 //type DynamicCommandBasic = 

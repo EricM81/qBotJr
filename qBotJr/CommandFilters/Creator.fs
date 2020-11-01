@@ -7,9 +7,6 @@ module Creator =
 
 //type cmdGuildFunc = (SocketMessage) -> (SocketGuildChannel) -> (SocketGuildUser) -> unit 
 
-    let RunHiJr  (pm : ParsedMsg) (goo : GuildOO) : unit =
-        pm.Message.Channel.SendMessageAsync("hey pop!")
-        |> Async.AwaitTask
-        |> ignore
+    let HiJr = Command.create "HI JR" UserPermission.Creator (fun _ y -> DiscordHelper.sendMsg y.Channel "hey pop!" |> ignore) DiscordHelper.reactDistrust
     
- 
+        
