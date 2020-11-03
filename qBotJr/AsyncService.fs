@@ -172,7 +172,6 @@ module AsyncService =
                     
                 | _::xs -> matchFilter xs
                 
-            
             matchFilter State.MessageFilters
     
         let processMail (inbox: MailboxProcessor<MailboxMessage>) = 
@@ -225,11 +224,11 @@ module AsyncService =
 //            |> Seq.map (fun x -> x)
 //        
         
-        State.Guilds
+        //State.Guilds
       
         //|> Seq.fold (fun x y -> y)
         //for KeyValue(i,x) in z do
-        
+        ()
             
         
         
