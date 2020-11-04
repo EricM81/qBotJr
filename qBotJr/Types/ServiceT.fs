@@ -3,20 +3,39 @@ open System
 open Discord
 open Discord.WebSocket
 
+
 //
 //Mailbox Types
 //
-type NewMessage = SocketMessage
+[<Struct>]
+type GuildOO =
+    {
+    Guild : SocketGuild
+    Channel : SocketTextChannel
+    User : IGuildUser //don't ask
+    }
+    static member create guild channel user  =
+        {Guild = guild;Channel = channel; User = user}
+        
+type NewMessage =
+    {
+    GuildOO : GuildOO
+    Message : SocketMessage
+    }
+    static member create goo msg =
+        {NewMessage.GuildOO = goo; Message = msg}
+        
 
 [<Struct>]    
 type MessageReaction =
     {
+    GuildOO : GuildOO
     Message : Cacheable<IUserMessage, uint64>
-    Channel : ISocketMessageChannel
-    Reaction : IReaction
+    Reaction : SocketReaction
+    IsHere : bool
     }
-    static member create msg channel reaction =
-        {MessageReaction.Message = msg; Channel = channel; Reaction = reaction}
+    static member create goo msg reaction isAdd =
+        {MessageReaction.GuildOO = goo; Message = msg; Reaction = reaction; IsHere = isAdd}
 
 //
 //New Message Types
@@ -41,21 +60,13 @@ type CommandLineArgs =
 type ParsedMsg =
     {
     
-    Message : NewMessage
+    Message : SocketMessage
     ParsedArgs : CommandLineArgs list
     }
     static member create  msg pArgs =
         {ParsedMsg.Message = msg; ParsedArgs = pArgs}       
 
-[<Struct>]
-type GuildOO =
-    {
-    Guild : SocketGuild
-    Channel : SocketGuildChannel
-    User : SocketGuildUser
-    }
-    static member create guild channel user  =
-        {Guild = guild;Channel = channel; User = user}
+
  
 // 
 //partial application types
@@ -91,7 +102,6 @@ type ByReactionAndUser =
     MsgID : uint64;
     UserID : uint64;
     Actions : ReAction list;
-
      } 
     static member create (msgID, userID, reactions) = 
         {ByReactionAndUser.MsgID = msgID; UserID = userID; Actions = reactions}
@@ -101,15 +111,14 @@ type ReactionFilterChoice =
     | ByReaction of ByReaction : ByReaction
     | ByReactionAndUser of ByReactionAndUser : ByReactionAndUser
     
-[<Struct>]
 type ReactionFilter =
     {
     GuildID : uint64
     mutable TTL : DateTimeOffset
-    Item : ReactionFilterChoice
+    FilterChoice : ReactionFilterChoice
     }
     static member create guild ttl item =
-        {ReactionFilter.GuildID = guild; TTL = ttl; Item = item}
+        {ReactionFilter.GuildID = guild; TTL = ttl; FilterChoice = item}
           
 [<Struct>]
 type Command =
@@ -136,17 +145,11 @@ type MessageFilter =
 type MailboxMessage =
     | NewMessage of NewMessage : NewMessage
     | MessageReaction  of MessageReaction : MessageReaction
-    | MessageFilter of MessageFilter : MessageFilter
-    | ReactionFilter of ReactionFilter : ReactionFilter
     | ScheduledTask of ScheduledTask : ScheduledTask
-    static member createMessage msg : MailboxMessage =
-        NewMessage msg
-    static member createReaction msg channel reaction : MailboxMessage=
-        MessageReaction (MessageReaction.create msg channel reaction)
-    static member createMessageFilter guild ttl perms item : MailboxMessage =
-        MessageFilter (MessageFilter.create  guild ttl perms item )
-    static member createReactionFilter guild ttl item : MailboxMessage =
-        ReactionFilter (ReactionFilter.create guild ttl item)
+    static member createMessage goo msg : MailboxMessage =
+        NewMessage (NewMessage.create msg goo)
+    static member createReaction  msg reaction isAdd goo : MailboxMessage=
+        MessageReaction (MessageReaction.create goo msg reaction isAdd)
     static member createTask i : MailboxMessage =
         ScheduledTask i
         

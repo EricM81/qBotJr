@@ -122,3 +122,24 @@ let test iter =
     ()
     
 #time
+
+type TestNull (name) = 
+    member this.Name = name
+    
+    
+
+let o : Object = Unchecked.defaultof<TestNull> :> Object
+let x = TestNull "name" :> Object
+
+let test o =
+    match box o with
+    | :? TestNull as t -> printfn "%s" (t.Name.ToString())
+    | null -> printfn "nully"
+    | _ -> printfn "sumfin else"
+    ()
+
+test o
+
+test x
+
+

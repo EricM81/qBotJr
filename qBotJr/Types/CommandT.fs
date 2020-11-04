@@ -24,22 +24,24 @@ type Lobby =
     {
     Name : string
     Channel : SocketGuildChannel
-    Players : Player list
+    mutable PlayerIDs : uint64 list
     }
     //static member create
 type Mode =
     {
     Name : string
     ModeMsg : RestUserMessage
+    mutable PlayerIDs : uint64 list
+    mutable PlayerListIsDirty : bool
     }
 type Server =
     {
     Guild : SocketGuild
-    TTL : DateTimeOffset
-    isDirty: bool
+    mutable TTL : DateTimeOffset
     mutable HereMsg : RestUserMessage option
     mutable Lobbies : Lobby list
     mutable Players : Player list
+    mutable PlayerListIsDirty : bool
     mutable Modes : Mode list
     }
     

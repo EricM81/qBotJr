@@ -8,16 +8,14 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="paket.dependencies" />
-    <None Include="paket.lock" />
     <None Include="settings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="App.config" />
     <Compile Include="Types\ConfigT.fs" />
     <Compile Include="Types\ServiceT.fs" />
     <Compile Include="Types\CommandT.fs" />
     <Compile Include="config.fs" />
+    <Compile Include="helper.fs" />
     <Compile Include="logger.fs" />
     <Compile Include="Emojis.fs" />
     <Compile Include="DiscordHelper.fs" />
@@ -44,11 +42,10 @@
     <None Include="Script1.fsx" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Discord.Net" Version="2.2.0" />
+    <PackageReference Include="Discord.Net" Version="2.3.0-dev-20201028.4" />
     <PackageReference Include="FSharp.Control.AsyncSeq" Version="3.0.2" />
     <PackageReference Include="FSharpx.Async" Version="1.14.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.8" />
     <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
   </ItemGroup>
-  <Import Project=".paket\Paket.Restore.targets" />
 </Project>
