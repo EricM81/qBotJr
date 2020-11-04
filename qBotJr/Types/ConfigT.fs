@@ -6,7 +6,8 @@ type BotSettings =
     DiscordToken : string
     LogFileRoot : string
     GuildSettingsRoot : string
-
+    CleanUpTaskDelay : int
+    UpdateHereMsgsDelay : int
     }
 
 [<Struct>]

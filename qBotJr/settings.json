@@ -1,0 +1,7 @@
+﻿{
+  "DiscordToken": "DummyToken.X3PDrQ.YU12w__n_cm6WVZdTxhOsEFvZ8E",
+  "LogFileRoot": "C:\\Users\\EricM\\Desktop\\qBotJr\\",
+  "GuildSettingsRoot": "C:\\Users\\EricM\\Desktop\\qBotJr\\Guilds\\",
+  "CleanUpTaskDelay": 10000,
+  "UpdateHereMsgsDelay": 3000
+}
