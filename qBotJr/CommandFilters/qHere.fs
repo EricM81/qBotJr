@@ -7,17 +7,17 @@ open qBotJr.T
 
 
 
-module qHere = 
+module qHere =
 
 //TODO: Save RestUserMessage for updating: ModifyAsync Action<MessageProperties> RequestOptions
-    
-    
+
+
 //-c Announcement channel for players
 //   Current Value:   -c #sub_chat_announcements
 
-//type cmdGuildFunc = (SocketMessage) -> (SocketGuildChannel) -> (SocketGuildUser) -> unit 
-    
-    
+//type cmdGuildFunc = (SocketMessage) -> (SocketGuildChannel) -> (SocketGuildUser) -> unit
+
+
     let lastAnnounceChannel (guild : SocketGuild) =
         config.GetGuildSettings(guild.Id).AnnounceChannel
 
@@ -25,13 +25,13 @@ module qHere =
         let cfg = config.GetGuildSettings guild.Id
         if cfg.AnnounceChannel <> channelID then
             {cfg with AnnounceChannel = channelID} |> config.SetGuildSettings
-            
+
     let printAnnouncement (ping : PingType) (players : Player list) : string =
         let sb = new StringBuilder()
         let a format = DiscordHelper.bprintfn sb format
-        
+
         DiscordHelper.pingToString ping
-        |> a "%s" 
+        |> a "%s"
         a ">>>React here with %s to join the queue!" Emojis.RaiseHands
         a ""
         a "You will get a ping in a new channel, made just for players in your match. You only have a few minutes to join before getting marked as afk, so please watch for the ping!"
@@ -40,16 +40,16 @@ module qHere =
         a "```You won't lose your place in line."
         a "I'll just skip you until you react agane!```"
         a ""
-        
+
         sb.ToString()
-        
+
     let printMan (channelID : uint64 option) : string =
         let channel = DiscordHelper.getChannelByID channelID
 
         let sb = new StringBuilder()
         let a format = DiscordHelper.bprintfn sb format
-        
-        
+
+
         a ">>> __Post a message to a channel (-a) and ping @ everyone (-e), @ here (-h), or no one (-n).__"
         a ""
         a "It's best to use a read-only, announcement style channel. The channel's permission determine who gets to play."
@@ -67,7 +67,7 @@ module qHere =
         a ""
         a "-a Announcement channel."
         match channel with
-        | Some c -> 
+        | Some c ->
             a "   Current Value: #%s" c.Name
             a "   This will be used if you omit the -a, but "
             a "   you always have to specify who to ping."
@@ -76,29 +76,34 @@ module qHere =
             a "   Your last used value will be stored here, but"
             a "   you have to provide a channel on the first run."
         a "```"
-        
-        
-        
+
+
+
         sb.ToString()
-        
+
     let postMan (goo : GuildOO) (param : qHereParameters) =
         DiscordHelper.sendMsg goo.Channel (printMan param.Announcements) |> ignore
 
+
     let postAnnouncement (goo : GuildOO) (ping : PingType) (channelID : uint64) =
-        let toChannel = DiscordHelper.getChannelByID (Some channelID)
+        let channel = DiscordHelper.getChannelByID (Some channelID)
+        let server = State.Guilds |> Map.tryFind goo.Guild.Id
+
+        printAnnouncement ping
+        |> DiscordHelper.sendMsg channel
         ()
-        
+
     let rec checkParams (xs : CommandLineArgs list) (prev : qHereParameters) : qHereParameters =
         //example input
         //qhere
         //qhere -a <#544636678954811392>
         //qhere <#544636678954811392>
-        //-a <#544636678954811392> -e -h 
+        //-a <#544636678954811392> -e -h
         match xs with
         | [] -> prev
         | x::xs when x.Switch = Some 'E' -> checkParams xs {prev with Ping = Some PingType.Everyone}
-        | x::xs when x.Switch = Some 'H' -> checkParams xs {prev with Ping = Some PingType.Here} 
-        | x::xs when x.Switch = Some 'N' -> checkParams xs {prev with Ping = Some PingType.NoOne} 
+        | x::xs when x.Switch = Some 'H' -> checkParams xs {prev with Ping = Some PingType.Here}
+        | x::xs when x.Switch = Some 'N' -> checkParams xs {prev with Ping = Some PingType.NoOne}
         | x::xs when x.Values <> [] ->
             match (DiscordHelper.parseDiscoChannel x.Values.Head) with
             | Some i -> {prev with Announcements = Some i}
@@ -106,39 +111,38 @@ module qHere =
             |> checkParams xs
         | _ -> //ignore invalid input?
             checkParams xs prev
-    
-                
+
+
     let ReRun (previous : qHereParameters) (pm : ParsedMsg) (goo : GuildOO) : unit =
         ()
-        
+
     let Run (pm : ParsedMsg) (goo : GuildOO) : unit =
-        
-        
+
+
 //        let x = lastAnnounceChannel channel
 //        let gs = config.GetGuildSettings(channel.Guild.Id)
 //        let gs' = {gs with AnnounceChannel = Some 760644069562646569UL; LobbiesCategory = Some 760643898833371146UL}
-        //config.SetGuildSettings gs'                   
-        
+        //config.SetGuildSettings gs'
+
         let param =
             lastAnnounceChannel goo.Guild
-            |> qHereParameters.create  None 
+            |> qHereParameters.create  None
             |> checkParams pm.ParsedArgs
-       
+
         updateAnnounceChannel goo.Guild param.Announcements
-        
+
         match param with
         | { Ping = Some p; Announcements = Some a} ->
             postAnnouncement goo p a
         | { Ping = p; Announcements = a } ->
             postMan goo param |> ignore
-            
+
             //TODO register dynamic listener
-            
-            
-            
-    
+
+
+
+
     let noPerms (pm : ParsedMsg) (goo : GuildOO) : unit =
         ()
-        
+
     let Command = Command.create "QHERE" UserPermission.Admin Run DiscordHelper.reactDistrust
-    

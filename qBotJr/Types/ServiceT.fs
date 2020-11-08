@@ -3,7 +3,6 @@ open System
 open Discord
 open Discord.WebSocket
 
-
 //
 //Mailbox Types
 //
@@ -16,7 +15,7 @@ type GuildOO =
     }
     static member create guild channel user  =
         {Guild = guild;Channel = channel; User = user}
-        
+
 type NewMessage =
     {
     GuildOO : GuildOO
@@ -24,9 +23,9 @@ type NewMessage =
     }
     static member create goo msg =
         {NewMessage.GuildOO = goo; Message = msg}
-        
 
-[<Struct>]    
+
+[<Struct>]
 type MessageReaction =
     {
     GuildOO : GuildOO
@@ -41,12 +40,12 @@ type MessageReaction =
 //New Message Types
 //
 [<Struct>]
-type UserPermission = 
+type UserPermission =
     | None = 0
     | Captain = 1
     | Admin = 2
     | Creator = 3
-    
+
 [<Struct>]
 type CommandLineArgs =
     {
@@ -59,27 +58,27 @@ type CommandLineArgs =
 [<Struct>]
 type ParsedMsg =
     {
-    
+
     Message : SocketMessage
     ParsedArgs : CommandLineArgs list
     }
     static member create  msg pArgs =
-        {ParsedMsg.Message = msg; ParsedArgs = pArgs}       
+        {ParsedMsg.Message = msg; ParsedArgs = pArgs}
 
 
- 
-// 
+
+//
 //partial application types
 //
-type MessageAction = ParsedMsg -> unit 
-type GuildMessageAction = ParsedMsg -> GuildOO -> unit 
+type MessageAction = ParsedMsg -> unit
+type GuildMessageAction = ParsedMsg -> GuildOO -> unit
 type ReactionAction = MessageReaction -> unit
-type ScheduledTask = unit -> unit
+
 
 //
-//Dynamic filters and their partial applications   
+//Dynamic filters and their partial applications
 [<Struct>]
-type ReAction = 
+type ReAction =
     {
     Emoji : string;
     Action : ReactionAction
@@ -88,7 +87,7 @@ type ReAction =
         {ReAction.Emoji = reaction; Action = action}
 
 [<Struct>]
-type ByReaction = 
+type ByReaction =
     {
     MsgID : uint64;
     Actions : ReAction list;
@@ -97,20 +96,20 @@ type ByReaction =
         {ByReaction.MsgID = msgID; Actions = reactions}
 
 [<Struct>]
-type ByReactionAndUser = 
+type ByReactionAndUser =
     {
     MsgID : uint64;
     UserID : uint64;
     Actions : ReAction list;
-     } 
-    static member create (msgID, userID, reactions) = 
+     }
+    static member create (msgID, userID, reactions) =
         {ByReactionAndUser.MsgID = msgID; UserID = userID; Actions = reactions}
-         
+
 [<Struct>]
 type ReactionFilterChoice =
     | ByReaction of ByReaction : ByReaction
     | ByReactionAndUser of ByReactionAndUser : ByReactionAndUser
-    
+
 type ReactionFilter =
     {
     GuildID : uint64
@@ -119,17 +118,20 @@ type ReactionFilter =
     }
     static member create guild ttl item =
         {ReactionFilter.GuildID = guild; TTL = ttl; FilterChoice = item}
-          
+
+
+
 [<Struct>]
 type Command =
     {
-    Prefix : string
+    PrefixUpper : string
+    PrefixLength : int
     RequiredPerm : UserPermission
     PermSuccess : GuildMessageAction
     PermFailure : GuildMessageAction
     }
-    static member create prefix perm success failure =
-        {Prefix = prefix; RequiredPerm = perm; PermSuccess = success; PermFailure = failure}
+    static member create (prefix : string) perm success failure =
+        {PrefixUpper = prefix.ToUpper(); PrefixLength = prefix.Length; RequiredPerm = perm; PermSuccess = success; PermFailure = failure}
 
 type MessageFilter =
     {
@@ -141,25 +143,41 @@ type MessageFilter =
     static member create guild ttl user items =
         {MessageFilter.GuildID = guild; TTL = ttl; User = user; Items = items}
 
-[<Struct>]    
+
+[<Struct>]
+type State =
+    {
+    mutable Guilds : Map<uint64, Server>
+    mutable CreatorFilters : Command array
+    mutable StaticFilters : Command array
+    mutable DynamicFilters : MessageFilter list
+    mutable ReactionFilters : ReactionFilter list
+    }
+    static member create  =
+        {State.Guilds = Map.empty; CreatorFilters = Array.empty; StaticFilters = Array.empty; DynamicFilters = []; ReactionFilters = []}
+
+
+
+type ScheduledTask = delegate of byref<State> -> unit
+
 type MailboxMessage =
-    | NewMessage of NewMessage : NewMessage
-    | MessageReaction  of MessageReaction : MessageReaction
-    | ScheduledTask of ScheduledTask : ScheduledTask
+    | NewMessage of NewMessage //: NewMessage
+    | MessageReaction  of MessageReaction //: MessageReaction
+    | Task of ScheduledTask //: ScheduledTask
     static member createMessage goo msg : MailboxMessage =
         NewMessage (NewMessage.create msg goo)
     static member createReaction  msg reaction isAdd goo : MailboxMessage=
         MessageReaction (MessageReaction.create goo msg reaction isAdd)
     static member createTask i : MailboxMessage =
-        ScheduledTask i
-        
+        Task i
+
 //[<Struct>]
-//type DynamicCommandBasic = 
+//type DynamicCommandBasic =
 //    {
 //    CmdParams : CmdParams
 //    Action : ActionBasic
 //    }
-//    static member create cmdParams action = 
+//    static member create cmdParams action =
 //        {DynamicCommandBasic.CmdParams = cmdParams; Action = action}
 
 //[<Struct>]
@@ -181,7 +199,7 @@ type MailboxMessage =
 //    //Channel
 
 //}
-//    
+//
 //[<Struct>]
 //type ByPrefix =
 //    {
@@ -191,10 +209,10 @@ type MailboxMessage =
 //    }
 //    static member create prefix success failure =
 //        {ByPrefix.Prefix = prefix; Success = success; Failure = failure}
-//    
+//
 //[<Struct>]
-//type ByPrefixAndUser = 
-//    {   
+//type ByPrefixAndUser =
+//    {
 //    UserID : uint64;
 //    Prefix : string;
 //    Success : GuildMessageAction
@@ -203,7 +221,7 @@ type MailboxMessage =
 //    }
 //    static member create user prefix success failure =
 //        {ByPrefixAndUser.UserID = user; Prefix = prefix; Success = success; Failure = failure}
-//    
+//
 //[<Struct>]
 //type MessageFilterChoice =
 //    | ByPrefix of ByPrefix : ByPrefix

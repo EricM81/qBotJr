@@ -1,7 +1,9 @@
 ﻿open qBotJr
-        
+
 [<EntryPoint>]
 let main (_: string []): int =
-   DiscordHelper.initializeClient AsyncService.Receive
-   DiscordHelper.startClient
-   0 
+
+    AsyncClient.InitializeClient commands.creatorFilters commands.staticFilters
+    DiscordHelper.initializeClient AsyncClient.Receive
+    DiscordHelper.startClient
+    0
