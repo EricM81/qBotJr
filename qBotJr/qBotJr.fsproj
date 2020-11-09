@@ -12,8 +12,8 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <Compile Include="Types\ConfigT.fs" />
-    <Compile Include="Types\CommandT.fs" />
     <Compile Include="Types\ServiceT.fs" />
+    <Compile Include="Types\CommandT.fs" />
     <Compile Include="Types\State.fs" />
     <Compile Include="Emojis.fs" />
     <Compile Include="config.fs" />

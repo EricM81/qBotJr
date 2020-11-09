@@ -65,8 +65,6 @@ type ParsedMsg =
     static member create  msg pArgs =
         {ParsedMsg.Message = msg; ParsedArgs = pArgs}
 
-
-
 //
 //partial application types
 //
@@ -74,52 +72,27 @@ type MessageAction = ParsedMsg -> unit
 type GuildMessageAction = ParsedMsg -> GuildOO -> unit
 type ReactionAction = MessageReaction -> unit
 
-
 //
 //Dynamic filters and their partial applications
 [<Struct>]
 type ReAction =
     {
-    Emoji : string;
+    MessageID : uint64
+    Emoji : string
     Action : ReactionAction
     }
-    static member create reaction action =
-        {ReAction.Emoji = reaction; Action = action}
-
-[<Struct>]
-type ByReaction =
-    {
-    MsgID : uint64;
-    Actions : ReAction list;
-    }
-    static member create (msgID, reactions) =
-        {ByReaction.MsgID = msgID; Actions = reactions}
-
-[<Struct>]
-type ByReactionAndUser =
-    {
-    MsgID : uint64;
-    UserID : uint64;
-    Actions : ReAction list;
-     }
-    static member create (msgID, userID, reactions) =
-        {ByReactionAndUser.MsgID = msgID; UserID = userID; Actions = reactions}
-
-[<Struct>]
-type ReactionFilterChoice =
-    | ByReaction of ByReaction : ByReaction
-    | ByReactionAndUser of ByReactionAndUser : ByReactionAndUser
+    static member create msgID reaction action =
+        {ReAction.MessageID = msgID ;Emoji = reaction; Action = action}
 
 type ReactionFilter =
     {
-    GuildID : uint64
+    MessageId : uint64
     mutable TTL : DateTimeOffset
-    FilterChoice : ReactionFilterChoice
+    UserID : uint64 option
+    Items : ReAction list
     }
-    static member create guild ttl item =
-        {ReactionFilter.GuildID = guild; TTL = ttl; FilterChoice = item}
-
-
+    static member create mid ttl uid items =
+        {ReactionFilter.MessageId = mid; TTL = ttl; UserID = uid; Items = items}
 
 [<Struct>]
 type Command =
@@ -144,32 +117,7 @@ type MessageFilter =
         {MessageFilter.GuildID = guild; TTL = ttl; User = user; Items = items}
 
 
-[<Struct>]
-type State =
-    {
-    mutable Guilds : Map<uint64, Server>
-    mutable CreatorFilters : Command array
-    mutable StaticFilters : Command array
-    mutable DynamicFilters : MessageFilter list
-    mutable ReactionFilters : ReactionFilter list
-    }
-    static member create  =
-        {State.Guilds = Map.empty; CreatorFilters = Array.empty; StaticFilters = Array.empty; DynamicFilters = []; ReactionFilters = []}
 
-
-
-type ScheduledTask = delegate of byref<State> -> unit
-
-type MailboxMessage =
-    | NewMessage of NewMessage //: NewMessage
-    | MessageReaction  of MessageReaction //: MessageReaction
-    | Task of ScheduledTask //: ScheduledTask
-    static member createMessage goo msg : MailboxMessage =
-        NewMessage (NewMessage.create msg goo)
-    static member createReaction  msg reaction isAdd goo : MailboxMessage=
-        MessageReaction (MessageReaction.create goo msg reaction isAdd)
-    static member createTask i : MailboxMessage =
-        Task i
 
 //[<Struct>]
 //type DynamicCommandBasic =

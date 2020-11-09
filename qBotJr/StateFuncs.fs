@@ -1,61 +1,47 @@
 ﻿namespace qBotJr
 open System
 open Discord
+open Discord.WebSocket
 open qBotJr.T
 open qBotJr.helper
 
-module StateFuncs =
+module State =
 
     let inline private addToMM task =
         Task task |> AsyncClient.Receive
-    let AddMessageFilterTask (mf : MessageFilter) =
+    let AddMessageFilter (mf : MessageFilter) =
         ScheduledTask(fun state -> state.DynamicFilters <- mf :: state.DynamicFilters)
         |> addToMM
 
-    let AddReactionFilterTask (rf : ReactionFilter) =
+    let AddReactionFilter (rf : ReactionFilter) =
         ScheduledTask(fun state -> state.ReactionFilters <- rf :: state.ReactionFilters)
         |> addToMM
 
-    let CleanUpTask () =
+    let CleanUp () =
 
         ScheduledTask(fun state ->
             let now = DateTimeOffset.Now
-            let guildsToRemove =
-                state.Guilds
-                |> Map.fold (fun acc k v -> if v.TTL < now then k::acc else acc) []
             state.Guilds <- state.Guilds |> Map.filter (fun _ v -> v.TTL > now)
             state.DynamicFilters <-
                     state.DynamicFilters
-                    |> List.filter (
-                        fun filter ->
-                            filter.TTL > now ||
-                            guildsToRemove |> List.exists (fun uid -> uid = filter.GuildID))
+                    |> List.filter (fun filter -> filter.TTL > now)
             state.ReactionFilters <-
                 state.ReactionFilters
-                |> List.filter (
-                        fun filter ->
-                            filter.TTL > now ||
-                            guildsToRemove |> List.exists (fun uid -> uid = filter.GuildID))
+                |> List.filter (fun filter -> filter.TTL > now)
         )
         |> addToMM
 
-    let SetPlayerState (guild : uint64) (iUser : IGuildUser) (stateFunc : Player -> Player) =
+    let SetPlayerState (guild : uint64) (user : IGuildUser) (stateFunc : Player -> unit) =
         ScheduledTask(fun state ->
             let server = state.Guilds.Item guild
-            let exists =
-                server.Players
-                |> List.exists
-                    (fun p ->
-                        if p.UID = iUser.Id then
-                            stateFunc p |> ignore
-                            true
-                        else
-                            false)
-            if not exists then
-                server.Players <-
-                    Player.create iUser.Id iUser.Nickname
-                    |> stateFunc
-                    |> prepend server.Players
-
+            server.Players
+            |> List.tryFind (fun p -> p.UID = user.Id)
+            |> function
+                | Some p -> p
+                | None ->
+                    let p = Player.create user.Id user.Nickname
+                    server.Players <- p::server.Players
+                    p
+            |> stateFunc
             server.PlayerListIsDirty <- true)
         |> addToMM

@@ -27,25 +27,26 @@ type Lobby =
     mutable PlayerIDs : uint64 list
     }
     //static member create
+
 type Mode =
     {
     Name : string
-    ModeMsg : RestUserMessage
+    ModeMsg : ReAction
     mutable PlayerIDs : uint64 list
     mutable PlayerListIsDirty : bool
     }
+
 type Server =
     {
     Guild : SocketGuild
     mutable TTL : DateTimeOffset
-    mutable HereMsg : RestUserMessage option
+    mutable HereMsg : ReAction option
     mutable Lobbies : Lobby list
     mutable Players : Player list
     mutable PlayerListIsDirty : bool
     mutable Modes : Mode list
     }
-    
-        
+
 type qBotParameters =
     {
     AdminRoles : uint64 list
@@ -54,8 +55,8 @@ type qBotParameters =
     }
     static member create admins captains cat =
         {AdminRoles = admins; CaptainRoles = captains; LobbiesCategory = cat}
-    
-[<Struct>]    
+
+[<Struct>]
 type qHereParameters =
     {
     Ping : PingType option
