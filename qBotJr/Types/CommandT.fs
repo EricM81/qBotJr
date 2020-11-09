@@ -1,51 +1,10 @@
 ﻿namespace qBotJr.T
 
-open System
-open Discord.WebSocket
-open Discord.Rest
 
 type PingType =
     | Everyone
     | Here
     | NoOne
-
-type Player =
-    {
-    UID : uint64
-    Name : string
-    mutable GamesPlayed : byte
-    mutable isHere : bool
-    mutable isBanned : bool
-    }
-    static member create  uid name=
-        {Player.UID = uid; Name = name; GamesPlayed = 1uy; isHere = true; isBanned = false}
-
-type Lobby =
-    {
-    Name : string
-    Channel : SocketGuildChannel
-    mutable PlayerIDs : uint64 list
-    }
-    //static member create
-
-type Mode =
-    {
-    Name : string
-    ModeMsg : ReAction
-    mutable PlayerIDs : uint64 list
-    mutable PlayerListIsDirty : bool
-    }
-
-type Server =
-    {
-    Guild : SocketGuild
-    mutable TTL : DateTimeOffset
-    mutable HereMsg : ReAction option
-    mutable Lobbies : Lobby list
-    mutable Players : Player list
-    mutable PlayerListIsDirty : bool
-    mutable Modes : Mode list
-    }
 
 type qBotParameters =
     {

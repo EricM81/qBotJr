@@ -2,49 +2,8 @@
 open System
 open Discord
 open Discord.WebSocket
+open Discord.Rest
 
-//
-//Mailbox Types
-//
-[<Struct>]
-type GuildOO =
-    {
-    Guild : SocketGuild
-    Channel : SocketTextChannel
-    User : IGuildUser //don't ask
-    }
-    static member create guild channel user  =
-        {Guild = guild;Channel = channel; User = user}
-
-type NewMessage =
-    {
-    GuildOO : GuildOO
-    Message : SocketMessage
-    }
-    static member create goo msg =
-        {NewMessage.GuildOO = goo; Message = msg}
-
-
-[<Struct>]
-type MessageReaction =
-    {
-    GuildOO : GuildOO
-    Message : Cacheable<IUserMessage, uint64>
-    Reaction : SocketReaction
-    IsHere : bool
-    }
-    static member create goo msg reaction isAdd =
-        {MessageReaction.GuildOO = goo; Message = msg; Reaction = reaction; IsHere = isAdd}
-
-//
-//New Message Types
-//
-[<Struct>]
-type UserPermission =
-    | None = 0
-    | Captain = 1
-    | Admin = 2
-    | Creator = 3
 
 [<Struct>]
 type CommandLineArgs =
@@ -65,15 +24,49 @@ type ParsedMsg =
     static member create  msg pArgs =
         {ParsedMsg.Message = msg; ParsedArgs = pArgs}
 
-//
-//partial application types
-//
+[<Struct>]
+type UserPermission =
+    | None = 0
+    | Captain = 1
+    | Admin = 2
+    | Creator = 3
+
+[<Struct>]
+type GuildOO =
+    {
+    Guild : SocketGuild
+    Channel : SocketTextChannel
+    User : IGuildUser //user of either the socket or rest variant
+    }
+    static member create guild channel user  =
+        {Guild = guild;Channel = channel; User = user}
+
+type NewMessage =
+    {
+    Goo : GuildOO
+    Message : SocketMessage
+    }
+    static member create goo msg =
+        {NewMessage.Goo = goo; Message = msg}
+
+
+[<Struct>]
+type MessageReaction =
+    {
+    Goo : GuildOO
+    Message : Cacheable<IUserMessage, uint64>
+    Reaction : SocketReaction
+    IsHere : bool
+    }
+    static member create goo msg reaction isAdd =
+        {MessageReaction.Goo = goo; Message = msg; Reaction = reaction; IsHere = isAdd}
+
 type MessageAction = ParsedMsg -> unit
 type GuildMessageAction = ParsedMsg -> GuildOO -> unit
 type ReactionAction = MessageReaction -> unit
+type AsyncTask<'T> = delegate of 'T -> Async<unit>
 
-//
-//Dynamic filters and their partial applications
+
 [<Struct>]
 type ReAction =
     {
@@ -116,61 +109,52 @@ type MessageFilter =
     static member create guild ttl user items =
         {MessageFilter.GuildID = guild; TTL = ttl; User = user; Items = items}
 
+type Player =
+    {
+    UID : uint64
+    Name : string
+    mutable GamesPlayed : byte
+    mutable isHere : bool
+    mutable isBanned : bool
+    }
+    static member create  uid name=
+        {Player.UID = uid; Name = name; GamesPlayed = 1uy; isHere = true; isBanned = false}
+
+type Lobby =
+    {
+    Name : string
+    Channel : SocketGuildChannel
+    mutable PlayerIDs : uint64 list
+    }
+    //static member create
 
 
+type HereMessage<'T> =
+    {
+    MessageID : uint64
+    Emoji : string
+    RestMsg : RestMessage
+    ModifyAsync : AsyncTask<'T>
+    ReAction : ReAction
+    }
 
-//[<Struct>]
-//type DynamicCommandBasic =
-//    {
-//    CmdParams : CmdParams
-//    Action : ActionBasic
-//    }
-//    static member create cmdParams action =
-//        {DynamicCommandBasic.CmdParams = cmdParams; Action = action}
+type Mode<'T> =
+    {
+    Name : string
+    HereMsg : HereMessage<'T>
+    mutable PlayerIDs : uint64 list
+    mutable PlayerListIsDirty : bool
+    }
 
-//[<Struct>]
-//type CommandUserChannel = {
-//    User : uint64;
-//    Channel : uint64;
-//    Expires : DateTime
-//    Action : Action
-//    }
+type Server =
+    {
+    Guild : SocketGuild
+    mutable TTL : DateTimeOffset
+    mutable HereMsg : HereMessage<Server> option
+    mutable Lobbies : Lobby list
+    mutable Players : Player list
+    mutable PlayerListIsDirty : bool
+    mutable Modes : Mode<Server> list
+    }
 
-//[<Struct>]
-//type CommandUser = {
-//    Command : string;
-//    Action : Action
-//}
 
-//type DynamicFilter = {
-//    User : DiscordEntity
-//    //Channel
-
-//}
-//
-//[<Struct>]
-//type ByPrefix =
-//    {
-//    Prefix : string
-//    Success : GuildMessageAction
-//    Failure : GuildMessageAction
-//    }
-//    static member create prefix success failure =
-//        {ByPrefix.Prefix = prefix; Success = success; Failure = failure}
-//
-//[<Struct>]
-//type ByPrefixAndUser =
-//    {
-//    UserID : uint64;
-//    Prefix : string;
-//    Success : GuildMessageAction
-//    Failure : GuildMessageAction
-//
-//    }
-//    static member create user prefix success failure =
-//        {ByPrefixAndUser.UserID = user; Prefix = prefix; Success = success; Failure = failure}
-//
-//[<Struct>]
-//type MessageFilterChoice =
-//    | ByPrefix of ByPrefix : ByPrefix
-//    | ByPrefixAndUser of ByPrefixAndUser : ByPrefixAndUser

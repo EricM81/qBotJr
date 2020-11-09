@@ -21,7 +21,8 @@ module AsyncClient =
 
         let checkPermAndRun (cmd : Command) (nm : NewMessage) =
             let pm = parseMsg cmd nm.Message
-            let goo = nm.GuildOO
+            let goo = nm.Goo
+
 
             if (getPerm goo.User) >= cmd.RequiredPerm then cmd.PermSuccess pm goo else cmd.PermFailure pm goo
 
@@ -45,7 +46,7 @@ module AsyncClient =
 
         //cmds I can run for testing....or memeing
         let searchCreator (nm : NewMessage) : ContinueOption<NewMessage, FoundMessage> =
-            if (UserPermission.Creator) = isCreator nm.GuildOO.User then
+            if (UserPermission.Creator) = isCreator nm.Goo.User then
                 matchArray nm state.CreatorFilters
             else
                 Continue nm
@@ -56,7 +57,7 @@ module AsyncClient =
         let matchFilter (msgGuild : uint64) (nm : NewMessage) (filter : MessageFilter) : FoundMessage option =
             match filter.GuildID, filter.User with
             | id, None when id = msgGuild -> matchList nm filter.Items
-            | id, Some u when id = msgGuild && u = nm.GuildOO.User.Id -> matchList nm filter.Items
+            | id, Some u when id = msgGuild && u = nm.Goo.User.Id -> matchList nm filter.Items
             | _ -> None //user doesn't match
             |> function
             | Some cmd -> Some(cmd, Some filter)
@@ -64,7 +65,7 @@ module AsyncClient =
 
         let searchDynamic (nm : NewMessage) : ContinueOption<NewMessage, FoundMessage> =
             let now = DateTimeOffset.Now
-            let msgGuild = nm.GuildOO.Guild.Id
+            let msgGuild = nm.Goo.Guild.Id
 
             state.DynamicFilters
             |> List.tryPick (fun filter -> if filter.TTL > now then matchFilter msgGuild nm filter else None)
@@ -82,12 +83,12 @@ module AsyncClient =
         let matchList (msg : uint64) (emoji : string) (items : ReAction list) : ReactionAction option =
             items |> List.tryPick (fun item -> matchReaction msg emoji item)
 
-        let matchModes (msg : uint64) (emoji : string) (items : Mode list) : ReactionAction option =
-            items |> List.tryPick (fun item -> matchReaction msg emoji item.ModeMsg)
+        let matchModes (msg : uint64) (emoji : string) (items : Mode<Server> list) : ReactionAction option =
+            items |> List.tryPick (fun item -> matchReaction msg emoji item.HereMsg.ReAction)
 
         let matchServer (msg : uint64) (emoji : string) (server : Server) : ReactionAction option =
             match server.HereMsg with
-            | Some x when x.MessageID = msg && x.Emoji = emoji -> Some x.Action
+            | Some x when x.MessageID = msg && x.Emoji = emoji -> Some x.ReAction.Action
             | _ -> matchModes msg emoji server.Modes
 
         let searchServers (mr : MessageReaction) : ContinueOption<MessageReaction, FoundReaction> =
@@ -137,14 +138,14 @@ module AsyncClient =
                 if cmd.RequiredPerm = UserPermission.Admin then
                     state.Guilds
                     |> Map.exists (fun k v ->
-                        if k = nm.GuildOO.Guild.Id then
+                        if k = nm.Goo.Guild.Id then
                             v.TTL <- DateTimeOffset.Now.AddHours(1.0)
                             true
                         else
                             false)
                     |> ignore
                 command.checkPermAndRun cmd nm
-            | Continue _ -> ()
+            | _ -> ()
         | MessageReaction mr ->
             reaction.searchServers mr
             |> bindCont reaction.searchDynamic
@@ -162,9 +163,7 @@ module AsyncClient =
             async {
                 let! mm = inbox.Receive()
                 matchMailbox mm
-                return! msgLoop ()
-            }
-
+                return! msgLoop () }
         msgLoop ()
 
     let private agent = MailboxProcessor.Start(processMail)

@@ -1,9 +1,7 @@
 ﻿namespace qBotJr
 open System
 open Discord
-open Discord.WebSocket
 open qBotJr.T
-open qBotJr.helper
 
 module State =
 

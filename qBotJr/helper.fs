@@ -16,10 +16,7 @@ module helper =
     //genericFail, noPermissions, and permissionsCheck
     //Can be wrapped with async{} and let processMsg execute them
 
-    let bind f x =
-        match x with
-        | Some x -> f x
-        | None -> None
+
 
     [<StructuralEquality; StructuralComparison>]
         [<Struct>]
@@ -27,20 +24,26 @@ module helper =
         | Continue of Continue : 'T
         | Found of Completed : 'U
 
-    let inline bind2 f g x =
+    let inline bind f x =
         match x with
-        | Continue y -> f g y
-        | Found y -> Found y
+        | Some x -> f x
+        | None -> None
+//
+//    let inline bind2 f g x =
+//        match x with
+//        | Continue y -> f g y
+//        | Found y -> Found y
 
     let inline bindCont f x =
         match x with
         | Continue T' -> f T'
         | Found U' -> Found U'
 
-    let inline bindPerms f x u =
-        match u with
-        | UserPermission.None -> f x
-        | _ -> u
+    //if no perm has been found for a user, keep searching
+    let inline bindPerms permSearch user currentPerm =
+        match currentPerm with
+        | UserPermission.None -> permSearch user //keep searching
+        | _ -> currentPerm //perm found
 
 
 
