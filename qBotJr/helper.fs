@@ -37,6 +37,11 @@ module helper =
         | Continue T' -> f T'
         | Found U' -> Found U'
 
+    let inline runCont f y x =
+        match x with
+        | Found U' -> f y U'
+        | _ -> ()
+
     //if no perm has been found for a user, keep searching
     let inline bindPerms permSearch user currentPerm =
         match currentPerm with

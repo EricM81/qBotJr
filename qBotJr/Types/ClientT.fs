@@ -51,35 +51,43 @@ type NewMessage =
 [<Struct>]
 type MessageReaction =
     {
+    Goo : GuildOO
     Message : Cacheable<IUserMessage, uint64>
     Reaction : SocketReaction
     IsAdd : bool
     }
-    static member create msg reaction isAdd =
-        {MessageReaction.Message = msg; Reaction = reaction; IsAdd = isAdd}
+    static member create msg reaction isAdd goo =
+        {MessageReaction.Goo = goo; Message = msg; Reaction = reaction; IsAdd = isAdd}
 
-type MessageAction = Server -> ParsedMsg -> GuildOO -> unit
-type ReactionAction = Server -> MessageReaction -> GuildOO -> unit
+type ActionResult =
+    | Done of Done : unit
+    | Async of Async : Async<unit>
+    | Server of Server : Server
+
+type MessageAction = ParsedMsg -> GuildOO -> Server -> ActionResult
+type ReactionAction = MessageReaction -> Server -> ActionResult
 
 [<Struct>]
 type ReAction =
     {
-    MessageID : uint64
+
     Emoji : string
     Action : ReactionAction
     }
-    static member create msgID reaction action =
-        {ReAction.MessageID = msgID ;Emoji = reaction; Action = action}
+    static member create emoji action =
+        {ReAction.Emoji = emoji; Action = action}
 
 type ReactionFilter =
     {
-    MessageId : uint64
+    GuildID : uint64
+    MessageID : uint64
     mutable TTL : DateTimeOffset
     UserID : uint64 option
     Items : ReAction list
     }
-    static member create mid ttl uid items =
-        {ReactionFilter.MessageId = mid; TTL = ttl; UserID = uid; Items = items}
+    static member create guild msgID ttl uid items =
+        {ReactionFilter.GuildID = guild; MessageID = msgID; TTL = ttl; UserID = uid; Items = items}
+
 
 [<Struct>]
 type Command =
@@ -87,8 +95,8 @@ type Command =
     PrefixUpper : string
     PrefixLength : int
     RequiredPerm : UserPermission
-    PermSuccess : GuildMessageAction
-    PermFailure : GuildMessageAction
+    PermSuccess : MessageAction
+    PermFailure : MessageAction
     }
     static member create (prefix : string) perm success failure =
         {PrefixUpper = prefix.ToUpper(); PrefixLength = prefix.Length; RequiredPerm = perm; PermSuccess = success; PermFailure = failure}

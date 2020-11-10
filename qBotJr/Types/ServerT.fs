@@ -31,11 +31,11 @@ type Server =
     {
     Guild : SocketGuild
     mutable TTL : DateTimeOffset
-    mutable HereMsg : HereMessage option
-    mutable Lobbies : Lobby list
-    mutable Players : Player list
+    HereMsg : HereMessage option
+    Lobbies : Lobby list
+    Players : Player list
     mutable PlayerListIsDirty : bool
-    mutable Modes : Mode list
+    Modes : Mode list
     }
     static member create guild =
         {Guild = guild; TTL = DateTimeOffset.Now.AddHours(1.0); HereMsg = None; Lobbies = []; Players = []; PlayerListIsDirty = false; Modes = []}

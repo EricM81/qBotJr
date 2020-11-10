@@ -6,13 +6,14 @@ open qBotJr.T
 module State =
 
     let inline private addToMM task =
-        Task task |> AsyncClient.Receive
+        Task task |> client.Receive
+
     let AddMessageFilter (mf : MessageFilter) =
         ScheduledTask(fun state -> state.cmdTempFilters <- mf :: state.cmdTempFilters)
         |> addToMM
 
     let AddReactionFilter (rf : ReactionFilter) =
-        ScheduledTask(fun state -> state.reaTempFilters <- rf :: state.reaTempFilters)
+        ScheduledTask(fun state -> state.rtTempFilters <- rf :: state.rtTempFilters)
         |> addToMM
 
     let CleanUp () =
@@ -23,8 +24,8 @@ module State =
             state.cmdTempFilters <-
                     state.cmdTempFilters
                     |> List.filter (fun filter -> filter.TTL > now)
-            state.reaTempFilters <-
-                state.reaTempFilters
+            state.rtTempFilters <-
+                state.rtTempFilters
                 |> List.filter (fun filter -> filter.TTL > now)
         )
         |> addToMM
@@ -32,14 +33,15 @@ module State =
     let SetPlayerState (guild : uint64) (user : IGuildUser) (stateFunc : Player -> unit) =
         ScheduledTask(fun state ->
             let server = state.Servers.Item guild
-            server.Players
-            |> List.tryFind (fun p -> p.UID = user.Id)
-            |> function
-                | Some p -> p
-                | None ->
-                    let p = Player.create user.Id user.Nickname
-                    server.Players <- p::server.Players
-                    p
+            let p =
+                server.Players
+                |> List.tryFind (fun p -> p.UID = user.Id)
+            match p with
+            | Some p -> p
+            | None ->
+                let p = Player.create user.Id user.Nickname
+                state.Servers <- Map.add server.Guild.Id {server with Players = p::server.Players} state.Servers
+                p
             |> stateFunc
             server.PlayerListIsDirty <- true)
         |> addToMM

@@ -3,7 +3,7 @@
 [<EntryPoint>]
 let main (_: string []): int =
 
-    AsyncClient.InitializeClient commands.creatorFilters commands.staticFilters
-    discord.initializeClient AsyncClient.Receive
+    client.InitializeClient commands.creatorFilters commands.staticFilters
+    discord.initializeClient client.Receive
     discord.startClient
     0

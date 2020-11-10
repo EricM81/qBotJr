@@ -1,8 +1,8 @@
 ﻿namespace qBotJr
 
 open System
-open Discord
 open Discord.WebSocket
+open FSharpx.Control
 open qBotJr.T
 open qBotJr.parser
 open qBotJr.helper
@@ -13,20 +13,19 @@ module client =
 
     let mutable private state = State.create
 
+    type private FoundMessage = Command * MessageFilter option
+    type private FoundReaction = ReactionAction * ReactionFilter option
+
     module private command =
 
-        type private FoundMessage = Command * MessageFilter option
 
         let inline parseMsg (cmd : Command) (msg : SocketMessage) =
             parseInput cmd.PrefixUpper msg.Content |> ParsedMsg.create msg
 
-        let checkPermAndRun (s : Server) (cmd : Command) (nm : NewMessage) =
+        let checkPermAndRun (cmd : Command) (nm : NewMessage) (s : Server) =
             let pm = parseMsg cmd nm.Message
             let goo = nm.Goo
-
-
-            if (getPerm goo.User) >= cmd.RequiredPerm then cmd.PermSuccess s pm goo else cmd.PermFailure s pm goo
-
+            if (getPerm goo.User) >= cmd.RequiredPerm then cmd.PermSuccess pm goo s else cmd.PermFailure pm goo s
 
         let inline matchPrefix (cmd : Command) (nm : NewMessage) : bool =
             let str = nm.Message.Content
@@ -65,10 +64,9 @@ module client =
             | Some cmd -> Some(cmd, Some filter)
             | None -> None
 
-        let searchDynamic (nm : NewMessage) : ContinueOption<NewMessage, FoundMessage> =
+        let searchTemp (nm : NewMessage) : ContinueOption<NewMessage, FoundMessage> =
             let now = DateTimeOffset.Now
             let msgGuild = nm.Goo.Guild.Id
-
             state.cmdTempFilters
             |> List.tryPick (fun filter -> if filter.TTL > now then matchFilter msgGuild nm filter else None)
             |> function
@@ -77,93 +75,87 @@ module client =
 
     module private reaction =
 
-        type private FoundReaction = ReactionAction * ReactionFilter option
+        let inline matchReaction (emoji : string) (item : ReAction) : ReactionAction option =
+            if item.Emoji = emoji then Some item.Action else None
 
-        let inline matchReaction (msg : uint64) (emoji : string) (item : ReAction) : ReactionAction option =
-            if item.MessageID = msg && item.Emoji = emoji then Some item.Action else None
-
-        let matchList (msg : uint64) (emoji : string) (items : ReAction list) : ReactionAction option =
-            items |> List.tryPick (fun item -> matchReaction msg emoji item)
-
-        let matchModes (msg : uint64) (emoji : string) (items : Mode<Server> list) : ReactionAction option =
-            items |> List.tryPick (fun item -> matchReaction msg emoji item.HereMsg.ReAction)
-
-        let matchServer (msg : uint64) (emoji : string) (server : Server) : ReactionAction option =
-            match server.HereMsg with
-            | Some x when x.MessageID = msg && x.Emoji = emoji -> Some x.ReAction.Action
-            | _ -> matchModes msg emoji server.Modes
-
-        let searchServers (mr : MessageReaction) : ContinueOption<MessageReaction, FoundReaction> =
-            //check here msg and game modes
-            let msg = mr.Message.Id
-            let emoji = mr.Reaction.Emote.Name
-
-            state.Servers
-            |> Map.tryPick (fun _ server -> matchServer msg emoji server)
-            |> function
-            | Some x -> Found(x, None)
-            | _ -> Continue mr
+        let matchList (emoji : string) (items : ReAction list) : ReactionAction option =
+            items |> List.tryPick (fun item -> matchReaction emoji item)
 
         let matchFilter (msg : uint64) (user : uint64) (emoji : string) (filter : ReactionFilter) : FoundReaction option =
-            match filter.MessageId, filter.UserID with
-            | fMsg, None when fMsg = msg -> matchList msg emoji filter.Items
-            | fMsg, Some fUser when fMsg = msg && fUser = user -> matchList msg emoji filter.Items
+            match filter.MessageID, filter.UserID with
+            | fMsg, None when fMsg = msg -> matchList emoji filter.Items
+            | fMsg, Some fUser when fMsg = msg && fUser = user -> matchList emoji filter.Items
             | _ -> None
             |> function
             | Some react -> Some(react, Some filter)
             | _ -> None
 
+        let searchServer (mr : MessageReaction) : ContinueOption<MessageReaction, FoundReaction> =
+            let searchFun (filter : ReactionFilter) =
+                matchFilter mr.Message.Id mr.Reaction.UserId mr.Reaction.Emote.Name filter
+            state.rtServerFilters
+            |> List.tryPick searchFun
+            |> function
+            | Some (action, _) -> Found(action, None)
+            | _ -> Continue mr
 
-        let searchDynamic (mr : MessageReaction) : ContinueOption<MessageReaction, FoundReaction> =
+        let searchTemp (mr : MessageReaction) : ContinueOption<MessageReaction, FoundReaction> =
             //check filters collection
-            let msg = mr.Message.Id
-            let user = mr.Reaction.UserId
-            let emoji = mr.Reaction.Emote.Name
-
-            state.reaTempFilters
-            |> List.tryPick (fun filter -> matchFilter msg user emoji filter)
+            let searchFun (filter : ReactionFilter) =
+                if filter.TTL > DateTimeOffset.Now then
+                    matchFilter mr.Message.Id mr.Reaction.UserId mr.Reaction.Emote.Name filter
+                else
+                    None
+            state.rtTempFilters
+            |> List.tryPick searchFun
             |> function
             | Some fr -> Found fr
             | _ -> Continue mr
 
-    let private updateGuildTTL id =
-        state.Guilds <-
-            state.Guilds
-            |> Map.change id (fun v ->
-                match v with
-                | Some server -> Some {server with TTL = DateTimeOffset.Now.AddHours(1.0)}
-                | None -> None)
+    let private getServer (guild : SocketGuild) =
+        state.Servers
+        |> Map.tryFind guild.Id
+        |> function
+        | Some s -> s
+        | None -> Server.create guild
+
+    let private updateServerTTL (server : Server) = server.TTL <- DateTimeOffset.Now.AddHours(1.0)
+
+    let runCommand (nm : NewMessage) ((cmd, filter) : FoundMessage) =
+        match filter with
+        | None -> ()
+        | Some f -> f.TTL <- DateTimeOffset.MinValue
+        let server = getServer nm.Goo.Guild
+        if cmd.RequiredPerm = UserPermission.Admin then
+            updateServerTTL server
+        command.checkPermAndRun cmd nm server
+        |> function
+        | Done () -> ()
+        | Async a -> Async.Start a
+        | Server s -> state.Servers <- state.Servers |> Map.add s.Guild.Id s
+
+    let runReaction (mr : MessageReaction) ((action, filter) : FoundReaction) : unit =
+        match filter with
+        | None -> ()
+        | Some f -> f.TTL <- DateTimeOffset.MinValue
+        getServer mr.Goo.Guild
+        |> action mr
+        |> function
+        | Done () -> ()
+        | Async a -> Async.Start a
+        | Server s -> state.Servers <- state.Servers |> Map.add s.Guild.Id s
 
     let private matchMailbox (mm : MailboxMessage) =
         match mm with
         | NewMessage nm ->
             command.searchStatic nm
             |> bindCont command.searchCreator
-            |> bindCont command.searchDynamic
-            |> function
-            | Found (cmd, filter) ->
-                match filter with
-                | None -> ()
-                | Some f -> f.TTL <- DateTimeOffset.MinValue
-                let server =
-                    state.Servers |> Map.tryFind nm.Goo.Guild.Id
-                    |> function
-                        | Some s -> s
-                        | None -> Server.create nm.Goo.Guild
-                if cmd.RequiredPerm = UserPermission.Admin then
-                    server.TTL <- DateTimeOffset.Now.AddHours(1.0)
-                command.checkPermAndRun server cmd nm
-            | _ -> ()
+            |> bindCont command.searchTemp
+            |> runCont runCommand nm
         | MessageReaction mr ->
-            reaction.searchServers mr
-            |> bindCont reaction.searchDynamic
-            |> function
-            | Found (action, filter) ->
-                match filter with
-                | Some f -> f.TTL <- DateTimeOffset.MinValue
-                | None -> ()
-                action mr
-            | _ -> ()
+            reaction.searchServer mr
+            |> bindCont reaction.searchTemp
+            |> runCont runReaction mr
         | Task t -> t.Invoke &state
 
     let private processMail (inbox : MailboxProcessor<MailboxMessage>) =
@@ -171,7 +163,8 @@ module client =
             async {
                 let! mm = inbox.Receive()
                 matchMailbox mm
-                return! msgLoop () }
+                return! msgLoop ()
+            }
         msgLoop ()
 
     let private agent = MailboxProcessor.Start(processMail)
@@ -184,12 +177,8 @@ module client =
     let Receive (mm : MailboxMessage) = agent.Post mm
 
     let GetServer (guild : SocketGuild) : Server =
-        state.Guilds
+        state.Servers
         |> Map.tryFind guild.Id
         |> function
-            | Some s -> s
-            | None -> Server.create guild
-
-
-
-
+        | Some s -> s
+        | None -> Server.create guild
