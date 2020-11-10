@@ -1,14 +1,15 @@
 ﻿namespace qBotJr
 
 open System
+open Discord
 open Discord.WebSocket
 open qBotJr.T
-open qBotJr.Interpreter
+open qBotJr.parser
 open qBotJr.helper
 
 
 //Threadsafe MailboxProcessor to filter commands and update state
-module AsyncClient =
+module client =
 
     let mutable private state = State.create
 
@@ -19,12 +20,11 @@ module AsyncClient =
         let inline parseMsg (cmd : Command) (msg : SocketMessage) =
             parseInput cmd.PrefixUpper msg.Content |> ParsedMsg.create msg
 
-        let checkPermAndRun (cmd : Command) (nm : NewMessage) =
+        let checkPermAndRunAsync (cmd : Command) (nm : NewMessage) =
             let pm = parseMsg cmd nm.Message
             let goo = nm.Goo
-
-
             if (getPerm goo.User) >= cmd.RequiredPerm then cmd.PermSuccess pm goo else cmd.PermFailure pm goo
+
 
         let inline matchPrefix (cmd : Command) (nm : NewMessage) : bool =
             let str = nm.Message.Content
@@ -124,6 +124,14 @@ module AsyncClient =
             | Some fr -> Found fr
             | _ -> Continue mr
 
+    let private updateGuildTTL id =
+        state.Guilds <-
+            state.Guilds
+            |> Map.change id (fun v ->
+                match v with
+                | Some server -> Some {server with TTL = DateTimeOffset.Now.AddHours(1.0)}
+                | None -> None)
+
     let private matchMailbox (mm : MailboxMessage) =
         match mm with
         | NewMessage nm ->
@@ -136,15 +144,8 @@ module AsyncClient =
                 | None -> ()
                 | Some f -> f.TTL <- DateTimeOffset.MinValue
                 if cmd.RequiredPerm = UserPermission.Admin then
-                    state.Guilds
-                    |> Map.exists (fun k v ->
-                        if k = nm.Goo.Guild.Id then
-                            v.TTL <- DateTimeOffset.Now.AddHours(1.0)
-                            true
-                        else
-                            false)
-                    |> ignore
-                command.checkPermAndRun cmd nm
+                   updateGuildTTL nm.Goo.Guild.Id
+                command.checkPermAndRunAsync cmd nm
             | _ -> ()
         | MessageReaction mr ->
             reaction.searchServers mr
@@ -174,3 +175,14 @@ module AsyncClient =
 
     //once a message is handled, it returns
     let Receive (mm : MailboxMessage) = agent.Post mm
+
+    let GetServer (guild : SocketGuild) : Server =
+        state.Guilds
+        |> Map.tryFind guild.Id
+        |> function
+            | Some s -> s
+            | None -> Server.create guild
+
+
+
+

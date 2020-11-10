@@ -1,4 +1,5 @@
 ﻿namespace qBotJr
+open System
 open System.Net.NetworkInformation
 open System.Text
 open System.Threading.Channels
@@ -26,13 +27,13 @@ module qHere =
         if cfg.AnnounceChannel <> channelID then
             {cfg with AnnounceChannel = channelID} |> config.SetGuildSettings
 
-    let printAnnouncement (ping : PingType) (players : Player list) : string =
-        let sb = new StringBuilder()
-        let a format = DiscordHelper.bprintfn sb format
+    let printHeader (ping : PingType) : string =
+        let sb = StringBuilder()
+        let a format = discord.bprintfn sb format
 
-        DiscordHelper.pingToString ping
+        discord.pingToString ping
         |> a "%s"
-        a ">>>React here with %s to join the queue!" Emojis.RaiseHands
+        a ">>>React here with %s to join the queue!" emojis.RaiseHands
         a ""
         a "You will get a ping in a new channel, made just for players in your match. You only have a few minutes to join before getting marked as afk, so please watch for the ping!"
         a ""
@@ -44,10 +45,10 @@ module qHere =
         sb.ToString()
 
     let printMan (channelID : uint64 option) : string =
-        let channel = DiscordHelper.getChannelByID channelID
+        let channel = discord.getChannelByID channelID
 
-        let sb = new StringBuilder()
-        let a format = DiscordHelper.bprintfn sb format
+        let sb = StringBuilder()
+        let a format = discord.bprintfn sb format
 
 
         a ">>> __Post a message to a channel (-a) and ping @ everyone (-e), @ here (-h), or no one (-n).__"
@@ -82,15 +83,17 @@ module qHere =
         sb.ToString()
 
     let postMan (goo : GuildOO) (param : qHereParameters) =
-        DiscordHelper.sendMsg goo.Channel (printMan param.Announcements) |> ignore
+        discord.sendMsg goo.Channel (printMan param.Announcements) |> ignore
 
 
     let postAnnouncement (goo : GuildOO) (ping : PingType) (channelID : uint64) =
-        let channel = DiscordHelper.getChannelByID (Some channelID)
-        let server = State.Guilds |> Map.tryFind goo.Guild.Id
+        let channel = discord.getChannelByID channelID
+        let server = client.GetServer goo.Guild
+        server.TTL <- DateTimeOffset.Now.AddHours(1.0)
 
-        printAnnouncement ping
-        |> DiscordHelper.sendMsg channel
+
+        printHeader ping
+        |> discord.sendMsg channel
         ()
 
     let rec checkParams (xs : CommandLineArgs list) (prev : qHereParameters) : qHereParameters =
@@ -105,7 +108,7 @@ module qHere =
         | x::xs when x.Switch = Some 'H' -> checkParams xs {prev with Ping = Some PingType.Here}
         | x::xs when x.Switch = Some 'N' -> checkParams xs {prev with Ping = Some PingType.NoOne}
         | x::xs when x.Values <> [] ->
-            match (DiscordHelper.parseDiscoChannel x.Values.Head) with
+            match (discord.parseDiscoChannel x.Values.Head) with
             | Some i -> {prev with Announcements = Some i}
             | _ -> prev
             |> checkParams xs
@@ -145,4 +148,4 @@ module qHere =
     let noPerms (pm : ParsedMsg) (goo : GuildOO) : unit =
         ()
 
-    let Command = Command.create "QHERE" UserPermission.Admin Run DiscordHelper.reactDistrust
+    let Command = Command.create "QHERE" UserPermission.Admin Run discord.reactDistrust

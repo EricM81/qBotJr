@@ -1,16 +1,17 @@
 ﻿namespace qBotJr
 open System.IO
 open System
+open System.Threading.Tasks
 
 //private singleton instance so we have a finalizer to close IO connections
-type private _logger() = 
-    
+type private _logger() =
+
     let mutable disposed = false
-    
+
 
     let f = File.Open((sprintf "%s%s-DiscoLog.txt" config.BotSettings.LogFileRoot (DateTime.Today.ToString("yyyyMMdd"))), FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read)
     let sw = new StreamWriter(f)
-    do  
+    do
         f.Seek(0L, SeekOrigin.End) |> ignore
         ()
 
@@ -21,29 +22,29 @@ type private _logger() =
         else
             disposed <- true
         ()
-    
+
     member this.WriteLine(str : string) =
         sw.WriteLine(str)
         sw.Flush()
 
-        
-    interface IDisposable with 
-        member this.Dispose () = 
+
+    interface IDisposable with
+        member this.Dispose () =
             cleanup(true)
             GC.SuppressFinalize(this)
-     
 
-    override this.Finalize () = 
+
+    override this.Finalize () =
         cleanup(false)
 
 //static singleton wrapper for file logger
-type logger() = 
-    
+type logger() =
+
     static let log = new _logger()
-    static let agent = 
+    static let agent =
         MailboxProcessor<string>.Start(
             fun inbox ->
-                let rec messageLoop ()= 
+                let rec messageLoop ()=
                     async {
                         let! msg = inbox.Receive()
                         log.WriteLine msg
@@ -51,8 +52,12 @@ type logger() =
                     }
                 messageLoop()
             )
-    static member WriteLine(str : string) = 
+    static member WriteLine(str : string) =
         agent.Post str
+
+    static member WriteConnectionLog (log : Discord.LogMessage) : Task =
+        agent.Post (sprintf "%s\n%s\n" log.Source log.Message)
+        Task.CompletedTask
 
 
 

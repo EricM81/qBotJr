@@ -1,6 +1,5 @@
 ﻿namespace qBotJr
 
-open qBotJr.T
 
 ////qNew <@!442438729207119892>		qNew @QButtsSr
 //    //qnew <@!679018301543677959>		qnew @Queue Bot

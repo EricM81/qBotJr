@@ -10,14 +10,13 @@ type State =
     mutable DynamicFilters : MessageFilter list
     mutable ReactionFilters : ReactionFilter list
     }
-    static member create  =
+    static member create =
         {State.Guilds = Map.empty; CreatorFilters = Array.empty; StaticFilters = Array.empty; DynamicFilters = []; ReactionFilters = []}
 
 
 
+//type ScheduledTask = delegate of byref<State> -> unit
 type ScheduledTask = delegate of byref<State> -> unit
-
-
 
 type MailboxMessage =
     | NewMessage of NewMessage //: NewMessage

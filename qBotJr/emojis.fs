@@ -1,9 +1,9 @@
 ﻿namespace qBotJr
 open System.Collections.Generic
 
-module Emojis =
+module emojis =
 
-    let dict = 
+    let dict =
         let tmp = new Dictionary<string, string>()
         tmp.Add("Distrust", "🤨")
         tmp.Add("Sleep", "💤")
@@ -137,5 +137,5 @@ module Emojis =
     let playerX = "🇽"
     let playerY = "🇾"
     let playerZ = "🇿"
-    
+
 

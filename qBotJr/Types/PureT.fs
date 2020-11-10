@@ -1,75 +1,74 @@
-﻿//namespace qBotJr.T
-//open System
-//open Discord
-//open Discord.WebSocket
-//open Discord.Rest
-//
-////pure .NET or Discord.NET types
-//
-//
-//
-//[<Struct>]
-//type GuildOO =
-//    {
-//    Guild : SocketGuild
-//    Channel : SocketTextChannel
-//    User : IGuildUser //user of either socket or rest client
-//    }
-//    static member create guild channel user  =
-//        {Guild = guild;Channel = channel; User = user}
-//
-//type NewMessage =
-//    {
-//    Goo : GuildOO
-//    Message : SocketMessage
-//    }
-//    static member create goo msg =
-//        {NewMessage.Goo = goo; Message = msg}
-//
-//
-//[<Struct>]
-//type CommandLineArgs =
-//    {
-//    Switch : char option
-//    Values : string list
-//    }
-//    static member create switch values =
-//        {Switch = switch; Values = values}
-//
-//
-//[<Struct>]
-//type UserPermission =
-//    | None = 0
-//    | Captain = 1
-//    | Admin = 2
-//    | Creator = 3
-//
-//
-//type PingType =
-//    | Everyone
-//    | Here
-//    | NoOne
-//
-//type Player =
-//    {
-//    UID : uint64
-//    Name : string
-//    mutable GamesPlayed : byte
-//    mutable isHere : bool
-//    mutable isBanned : bool
-//    }
-//    static member create  uid name =
-//        {Player.UID = uid; Name = name; GamesPlayed = 1uy; isHere = true; isBanned = false}
-//
-//type Lobby =
-//    {
-//    Name : string
-//    Channel : SocketGuildChannel
-//    mutable PlayerIDs : uint64 list
-//    }
-//    //static member create
-//
-//
+﻿namespace qBotJr.T
+open Discord
+open Discord.WebSocket
+
+//pure .NET or Discord.NET types
+
+
+[<Struct>]
+type UserPermission =
+    | None = 0
+    | Captain = 1
+    | Admin = 2
+    | Creator = 3
+
+type PingType =
+    | Everyone
+    | Here
+    | NoOne
+
+type AsyncTask<'T> = delegate of byref<'T> -> Async<unit>
+
+
+[<Struct>]
+type GuildOO =
+    {
+    Guild : SocketGuild
+    Channel : SocketTextChannel
+    User : IGuildUser //user of either socket or rest client
+    }
+    static member create guild channel user  =
+        {Guild = guild;Channel = channel; User = user}
+
+type NewMessage =
+    {
+    Goo : GuildOO
+    Message : SocketMessage
+    }
+    static member create goo msg =
+        {NewMessage.Goo = goo; Message = msg}
+
+
+[<Struct>]
+type MessageReaction =
+    {
+    Goo : GuildOO
+    Message : Cacheable<IUserMessage, uint64>
+    Reaction : SocketReaction
+    IsHere : bool
+    }
+    static member create goo msg reaction isAdd =
+        {MessageReaction.Goo = goo; Message = msg; Reaction = reaction; IsHere = isAdd}
+
+[<Struct>]
+type CommandLineArgs =
+    {
+    Switch : char option
+    Values : string list
+    }
+    static member create switch values =
+        {Switch = switch; Values = values}
+
+[<Struct>]
+type ParsedMsg =
+    {
+    Message : SocketMessage
+    ParsedArgs : CommandLineArgs list
+    }
+    static member create  msg pArgs =
+        {ParsedMsg.Message = msg; ParsedArgs = pArgs}
+
+
 ////Impure .NET and Discord.NET types
 //
 //[<Struct>]
