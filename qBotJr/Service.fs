@@ -46,13 +46,13 @@ module stuff =
             if msg.Author.Id = 442438729207119892UL then
                 Async.AwaitTask(msg.Channel.SendMessageAsync("right dad")) |> ignore
             else
-                Async.AwaitTask(msg.AddReactionAsync(Emote.Parse(Emojis.dict.Item("Distrust")))) |> ignore
+                Async.AwaitTask(msg.AddReactionAsync(Emote.Parse(emojis.dict.Item("Distrust")))) |> ignore
 
         | "THANKS JR" ->
             if msg.Author.Id = 442438729207119892UL then
                 Async.AwaitTask(msg.Channel.SendMessageAsync("love ya dad")) |> ignore
             else
-                Async.AwaitTask(msg.AddReactionAsync(Emote.Parse(Emojis.dict.Item("Distrust")))) |> ignore
+                Async.AwaitTask(msg.AddReactionAsync(Emote.Parse(emojis.dict.Item("Distrust")))) |> ignore
         |"QPING" ->
             Async.AwaitTask(msg.Channel.SendMessageAsync(@"<@!442438729207119892> <@!643435344355917854> <@!257947314625314816>")) |> ignore
             ()
@@ -61,7 +61,7 @@ module stuff =
             let msg2 = Async.RunSynchronously(x)
 
             logger.WriteLine "+_+_+_+_+_+_+_ Starting react test"
-            [Emojis.Ok ; Emojis.Cancel ; Emojis.Back ; Emojis.FU]
+            [emojis.Ok ; emojis.Cancel ; emojis.Back ; emojis.FU]
             |> Seq.iter 
                 (fun x -> 
                     logger.WriteLine ((DateTime.Now.ToString("mm:ss:ffff")) + " - " + x )

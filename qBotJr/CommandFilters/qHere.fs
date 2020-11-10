@@ -1,5 +1,4 @@
 ﻿namespace qBotJr
-open System
 open System.Net.NetworkInformation
 open System.Text
 open System.Threading.Channels
@@ -27,8 +26,8 @@ module qHere =
         if cfg.AnnounceChannel <> channelID then
             {cfg with AnnounceChannel = channelID} |> config.SetGuildSettings
 
-    let printHeader (ping : PingType) : string =
-        let sb = StringBuilder()
+    let printAnnouncement (ping : PingType) (players : Player list) : string =
+        let sb = new StringBuilder()
         let a format = discord.bprintfn sb format
 
         discord.pingToString ping
@@ -47,7 +46,7 @@ module qHere =
     let printMan (channelID : uint64 option) : string =
         let channel = discord.getChannelByID channelID
 
-        let sb = StringBuilder()
+        let sb = new StringBuilder()
         let a format = discord.bprintfn sb format
 
 
@@ -87,12 +86,10 @@ module qHere =
 
 
     let postAnnouncement (goo : GuildOO) (ping : PingType) (channelID : uint64) =
-        let channel = discord.getChannelByID channelID
-        let server = client.GetServer goo.Guild
-        server.TTL <- DateTimeOffset.Now.AddHours(1.0)
+        let channel = discord.getChannelByID (Some channelID)
+        let server = State.Servers |> Map.tryFind goo.Guild.Id
 
-
-        printHeader ping
+        printAnnouncement ping
         |> discord.sendMsg channel
         ()
 

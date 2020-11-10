@@ -5,7 +5,7 @@ open Discord
 
 
 module helper =
-    let inline prepend xs x = x::xs
+    let inline prepend xs x = x :: xs
 
     //I'm not sure if resulting workflow steps should be asynchronous.
     //The Discord.NET wrapper already handles all network communication asynchronously.
@@ -16,10 +16,8 @@ module helper =
     //genericFail, noPermissions, and permissionsCheck
     //Can be wrapped with async{} and let processMsg execute them
 
-
-
-    [<StructuralEquality; StructuralComparison>]
-        [<Struct>]
+    [<StructuralEquality ; StructuralComparison>]
+    [<Struct>]
     type ContinueOption<'T, 'U> =
         | Continue of Continue : 'T
         | Found of Completed : 'U
@@ -28,7 +26,7 @@ module helper =
         match x with
         | Some x -> f x
         | None -> None
-//
+    //
 //    let inline bind2 f g x =
 //        match x with
 //        | Continue y -> f g y
@@ -45,30 +43,30 @@ module helper =
         | UserPermission.None -> permSearch user //keep searching
         | _ -> currentPerm //perm found
 
-
-
     let isCreator (gUser : IGuildUser) =
-            if gUser.Id = 442438729207119892UL then UserPermission.Creator else UserPermission.None
+        if gUser.Id = 442438729207119892UL then UserPermission.Creator else UserPermission.None
 
     let isDiscordAdmin (gUser : IGuildUser) =
         if gUser.GuildPermissions.Administrator = true then UserPermission.Admin else UserPermission.None
 
     let isRole (serverRoles : uint64 list) (gUser : IGuildUser) =
         serverRoles
-        |> List.exists (fun serverRole ->
-            gUser.RoleIds |> Seq.exists (fun userRole -> userRole = serverRole))
+        |> List.exists (fun serverRole -> gUser.RoleIds |> Seq.exists (fun userRole -> userRole = serverRole))
 
     let isGuildAdmin (gUser : IGuildUser) =
-        if isRole (config.GetGuildSettings(gUser.Guild.Id).AdminRoles) gUser then UserPermission.Admin else UserPermission.None
+        if isRole (config.GetGuildSettings(gUser.Guild.Id).AdminRoles) gUser then
+            UserPermission.Admin
+        else
+            UserPermission.None
 
     let isGuildCaptain (gUser : IGuildUser) =
-        if isRole (config.GetGuildSettings(gUser.Guild.Id).CaptainRoles) gUser then UserPermission.Captain else UserPermission.None
-
+        if isRole (config.GetGuildSettings(gUser.Guild.Id).CaptainRoles) gUser then
+            UserPermission.Captain
+        else
+            UserPermission.None
 
     let getPerm gUser : UserPermission =
         isCreator gUser
         |> bindPerms isDiscordAdmin gUser
         |> bindPerms isGuildAdmin gUser
         |> bindPerms isGuildCaptain gUser
-
-

@@ -1,21 +1,26 @@
 ﻿namespace qBotJr
+
 open System.IO
 open System
-open System.Threading.Tasks
 
 //private singleton instance so we have a finalizer to close IO connections
 type private _logger() =
 
     let mutable disposed = false
 
+    let f =
+        File.Open
+            ((sprintf "%s%s-DiscoLog.txt" config.BotSettings.LogFileRoot (DateTime.Today.ToString("yyyyMMdd"))),
+             FileMode.OpenOrCreate,
+             FileAccess.Write,
+             FileShare.Read)
 
-    let f = File.Open((sprintf "%s%s-DiscoLog.txt" config.BotSettings.LogFileRoot (DateTime.Today.ToString("yyyyMMdd"))), FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read)
     let sw = new StreamWriter(f)
     do
         f.Seek(0L, SeekOrigin.End) |> ignore
         ()
 
-    let cleanup(disposing:bool) =
+    let cleanup (disposing : bool) =
         if disposing = false then
             sw.Flush()
             sw.Close()
@@ -29,36 +34,27 @@ type private _logger() =
 
 
     interface IDisposable with
-        member this.Dispose () =
-            cleanup(true)
+        member this.Dispose() =
+            cleanup (true)
             GC.SuppressFinalize(this)
 
-
-    override this.Finalize () =
-        cleanup(false)
+    override this.Finalize() = cleanup (false)
 
 //static singleton wrapper for file logger
 type logger() =
 
     static let log = new _logger()
+
     static let agent =
-        MailboxProcessor<string>.Start(
-            fun inbox ->
-                let rec messageLoop ()=
-                    async {
-                        let! msg = inbox.Receive()
-                        log.WriteLine msg
-                        return! messageLoop()
-                    }
-                messageLoop()
-            )
-    static member WriteLine(str : string) =
-        agent.Post str
+        MailboxProcessor<string>
+            .Start(fun inbox ->
+                  let rec messageLoop () =
+                      async {
+                          let! msg = inbox.Receive()
+                          log.WriteLine msg
+                          return! messageLoop ()
+                      }
 
-    static member WriteConnectionLog (log : Discord.LogMessage) : Task =
-        agent.Post (sprintf "%s\n%s\n" log.Source log.Message)
-        Task.CompletedTask
+                  messageLoop ())
 
-
-
-
+    static member WriteLine(str : string) = agent.Post str

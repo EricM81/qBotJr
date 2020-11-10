@@ -20,10 +20,12 @@ module client =
         let inline parseMsg (cmd : Command) (msg : SocketMessage) =
             parseInput cmd.PrefixUpper msg.Content |> ParsedMsg.create msg
 
-        let checkPermAndRunAsync (cmd : Command) (nm : NewMessage) =
+        let checkPermAndRun (s : Server) (cmd : Command) (nm : NewMessage) =
             let pm = parseMsg cmd nm.Message
             let goo = nm.Goo
-            if (getPerm goo.User) >= cmd.RequiredPerm then cmd.PermSuccess pm goo else cmd.PermFailure pm goo
+
+
+            if (getPerm goo.User) >= cmd.RequiredPerm then cmd.PermSuccess s pm goo else cmd.PermFailure s pm goo
 
 
         let inline matchPrefix (cmd : Command) (nm : NewMessage) : bool =
@@ -42,12 +44,12 @@ module client =
             //all static bot commands start with a "q"
             //no Q, no need to check
             let q = nm.Message.Content.[0]
-            if (q = 'Q' || q = 'q') then matchArray nm state.StaticFilters else Continue nm
+            if (q = 'Q' || q = 'q') then matchArray nm state.cmdStaticFilters else Continue nm
 
         //cmds I can run for testing....or memeing
         let searchCreator (nm : NewMessage) : ContinueOption<NewMessage, FoundMessage> =
             if (UserPermission.Creator) = isCreator nm.Goo.User then
-                matchArray nm state.CreatorFilters
+                matchArray nm state.cmdCreatorFilters
             else
                 Continue nm
 
@@ -67,7 +69,7 @@ module client =
             let now = DateTimeOffset.Now
             let msgGuild = nm.Goo.Guild.Id
 
-            state.DynamicFilters
+            state.cmdTempFilters
             |> List.tryPick (fun filter -> if filter.TTL > now then matchFilter msgGuild nm filter else None)
             |> function
             | Some fm -> Found fm
@@ -96,7 +98,7 @@ module client =
             let msg = mr.Message.Id
             let emoji = mr.Reaction.Emote.Name
 
-            state.Guilds
+            state.Servers
             |> Map.tryPick (fun _ server -> matchServer msg emoji server)
             |> function
             | Some x -> Found(x, None)
@@ -118,7 +120,7 @@ module client =
             let user = mr.Reaction.UserId
             let emoji = mr.Reaction.Emote.Name
 
-            state.ReactionFilters
+            state.reaTempFilters
             |> List.tryPick (fun filter -> matchFilter msg user emoji filter)
             |> function
             | Some fr -> Found fr
@@ -143,9 +145,14 @@ module client =
                 match filter with
                 | None -> ()
                 | Some f -> f.TTL <- DateTimeOffset.MinValue
+                let server =
+                    state.Servers |> Map.tryFind nm.Goo.Guild.Id
+                    |> function
+                        | Some s -> s
+                        | None -> Server.create nm.Goo.Guild
                 if cmd.RequiredPerm = UserPermission.Admin then
-                   updateGuildTTL nm.Goo.Guild.Id
-                command.checkPermAndRunAsync cmd nm
+                    server.TTL <- DateTimeOffset.Now.AddHours(1.0)
+                command.checkPermAndRun server cmd nm
             | _ -> ()
         | MessageReaction mr ->
             reaction.searchServers mr
@@ -170,8 +177,8 @@ module client =
     let private agent = MailboxProcessor.Start(processMail)
 
     let InitializeClient creatorFilters staticFilters =
-        state.CreatorFilters <- creatorFilters
-        state.StaticFilters <- staticFilters
+        state.cmdCreatorFilters <- creatorFilters
+        state.cmdStaticFilters <- staticFilters
 
     //once a message is handled, it returns
     let Receive (mm : MailboxMessage) = agent.Post mm

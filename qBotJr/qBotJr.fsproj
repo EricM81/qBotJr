@@ -12,19 +12,17 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <Compile Include="Types\ConfigT.fs" />
-    <Compile Include="Types\PureT.fs" />
-    <Compile Include="Types\ServiceT.fs" />
-    <Compile Include="Types\CommandT.fs" />
+    <Compile Include="Types\ServerT.fs" />
+    <Compile Include="Types\ClientT.fs" />
     <Compile Include="Types\StateT.fs" />
     <Compile Include="emojis.fs" />
     <Compile Include="config.fs" />
     <Compile Include="helper.fs" />
     <Compile Include="logger.fs" />
-    <Compile Include="conn.fs" />
     <Compile Include="discord.fs" />
     <Compile Include="parser.fs" />
     <Compile Include="client.fs" />
-    <Compile Include="StateFuncs.fs" />
+    <Compile Include="stateFun.fs" />
     <Compile Include="CommandFilters\Creator.fs" />
     <Compile Include="CommandFilters\qBot.fs" />
     <Compile Include="CommandFilters\qHere.fs" />
@@ -40,6 +38,7 @@
     <Compile Include="CommandFilters\qCustoms.fs" />
     <Compile Include="CommandFilters\commands.fs" />
     <Compile Include="Scheduler.fs" />
+    <Compile Include="Service.fs" />
     <Compile Include="Program.fs" />
     <None Include="Script1.fsx" />
   </ItemGroup>
