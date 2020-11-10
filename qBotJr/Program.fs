@@ -4,6 +4,6 @@
 let main (_: string []): int =
 
     AsyncClient.InitializeClient commands.creatorFilters commands.staticFilters
-    DiscordHelper.initializeClient AsyncClient.Receive
-    DiscordHelper.startClient
+    discord.initializeClient AsyncClient.Receive
+    discord.startClient
     0

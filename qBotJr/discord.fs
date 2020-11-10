@@ -1,4 +1,5 @@
 ﻿namespace qBotJr
+
 open System
 open System.Text
 open Discord
@@ -9,15 +10,15 @@ open FSharpx.Control
 open qBotJr
 open qBotJr.T
 
-module DiscordHelper =
+module discord =
 
     let clientConfig =
-            let intents = GatewayIntents.GuildMessages ||| GatewayIntents.GuildMessageReactions
-            let tmp = DiscordSocketConfig()
-            tmp.MessageCacheSize <- 100
-            //tmp.AlwaysDownloadUsers <- true
-            tmp.GatewayIntents <- Nullable<GatewayIntents>(intents)
-            tmp
+        let intents = GatewayIntents.GuildMessages ||| GatewayIntents.GuildMessageReactions
+        let tmp = DiscordSocketConfig()
+        tmp.MessageCacheSize <- 100
+        //tmp.AlwaysDownloadUsers <- true
+        tmp.GatewayIntents <- Nullable<GatewayIntents>(intents)
+        tmp
 
     let restClientOptions =
         let opt = RequestOptions.Default
@@ -46,9 +47,7 @@ module DiscordHelper =
             | :? SocketGuildUser as gUser ->
                 let gChannel = msg.Channel :?> SocketTextChannel
 
-                GuildOO.create gChannel.Guild gChannel gUser
-                |> MailboxMessage.createMessage msg
-                |> receiveFun
+                GuildOO.create gChannel.Guild gChannel gUser |> MailboxMessage.createMessage msg |> receiveFun
             | _ ->
                 //TODO check logs for things that fail to cast and remove later
                 sprintf "NewMessage failed to cast:" |> logger.WriteLine
@@ -56,7 +55,13 @@ module DiscordHelper =
                 logger.WriteLine ""
             Task.CompletedTask
 
-        let downCastReactionOrIgnore (receiveFun : MailboxMessage -> unit)  (msg : Cacheable<IUserMessage, uint64>) (_ : ISocketMessageChannel) (sReaction : SocketReaction) (isHere : bool) =
+        let downCastReactionOrIgnore
+            (receiveFun : MailboxMessage -> unit)
+            (msg : Cacheable<IUserMessage, uint64>)
+            (_ : ISocketMessageChannel)
+            (sReaction : SocketReaction)
+            (isHere : bool)
+            =
             let inline foo receiveFun (sReaction : SocketReaction) msg iUser isHere : unit =
                 let gChannel = sReaction.Channel :?> SocketTextChannel
                 GuildOO.create gChannel.Guild gChannel iUser
@@ -64,8 +69,7 @@ module DiscordHelper =
                 |> receiveFun
 
             match sReaction.User.Value with
-            | :? IGuildUser as iUser ->
-                foo receiveFun sReaction msg iUser isHere
+            | :? IGuildUser as iUser -> foo receiveFun sReaction msg iUser isHere
             | _ ->
                 async {
                     //TODO check logs for things that fail to cast and remove later
@@ -75,18 +79,19 @@ module DiscordHelper =
                     let! rUser =
                         client.Rest.GetGuildUserAsync(sReaction.UserId, sReaction.UserId, restClientOptions)
                         |> Async.AwaitTask
+
                     do foo receiveFun sReaction msg rUser isHere
 
                     sprintf "%O" rUser |> logger.WriteLine
-                    logger.WriteLine ""
 
+                    logger.WriteLine ""
                 }
                 |> Async.Start
             Task.CompletedTask
 
-    let initializeClient (receiveFun : MailboxMessage -> unit)  =
+    let initializeClient (receiveFun : MailboxMessage -> unit) =
         client.add_Log (fun log ->
-            logger.WriteLine (sprintf "%s\n%s\n" log.Source log.Message)
+            logger.WriteLine(sprintf "%s\n%s\n" log.Source log.Message)
             Task.CompletedTask)
 
         client.add_Ready (fun _ ->
@@ -96,24 +101,24 @@ module DiscordHelper =
         //Important:  Discord.NET uses a lot of type and interface casting.
         //If the SocketChannel successfully casts to a SocketGuildChannel then all
         //other castings will succeed.
-        client.add_MessageReceived(fun msg ->
-            helper.downCastMsgOrIgnore receiveFun msg)
+        client.add_MessageReceived (fun msg -> helper.downCastMsgOrIgnore receiveFun msg)
         client.add_ReactionAdded (fun msg channel reaction ->
             helper.downCastReactionOrIgnore receiveFun msg channel reaction true)
         client.add_ReactionRemoved (fun msg channel reaction ->
             helper.downCastReactionOrIgnore receiveFun msg channel reaction false)
 
-        //TODO start scheduler
-        //TODO listen for can't connect and disconnects and try agane after one minute
+    //TODO start scheduler
+    //TODO listen for can't connect and disconnects and try agane after one minute
 
     let startClient =
         let foo =
-            async{
+            async {
                 do! Async.AwaitTask(client.LoginAsync(TokenType.Bot, config.BotSettings.DiscordToken))
                 do! Async.AwaitTask(client.StartAsync())
                 do! Async.AwaitTask(Task.Delay(Timeout.Infinite))
                 return ()
             }
+
         Async.RunSynchronously foo
 
     let parseDiscoUser (name : string) : uint64 option =
@@ -130,12 +135,13 @@ module DiscordHelper =
         let rec getRolesByIDsInner (roles : uint64 list) (acc : SocketRole list) =
             match roles with
             | [] -> acc
-            | head::tail ->
+            | head :: tail ->
                 let y = guild.Roles |> Seq.find (fun x -> x.Id = head)
-                getRolesByIDsInner tail (y::acc)
+                getRolesByIDsInner tail (y :: acc)
+
         getRolesByIDsInner ids []
 
-    let getCategoryByID (guild : SocketGuild) (id : uint64 option) : SocketCategoryChannel option  =
+    let getCategoryByID (guild : SocketGuild) (id : uint64 option) : SocketCategoryChannel option =
         match id with
         | Some x ->
             let cat = guild.GetCategoryChannel x
@@ -167,16 +173,11 @@ module DiscordHelper =
 
     let sendMsg (channel : SocketChannel) (msg : string) =
         match channel with
-        | :? SocketTextChannel as x ->
-            x.SendMessageAsync msg |> Async.AwaitTask |> Some
+        | :? SocketTextChannel as x -> x.SendMessageAsync msg |> Async.AwaitTask |> Some
         | _ -> None
 
     let reactDistrust (parsedM : ParsedMsg) (_ : GuildOO) : unit =
-        Emojis.Distrust
-        |> Emoji
-        |> parsedM.Message.AddReactionAsync
-        |> Async.AwaitTask
-        |> ignore
+        emojis.Distrust |> Emoji |> parsedM.Message.AddReactionAsync |> Async.AwaitTask |> ignore
 
     let pingToString (p : PingType) =
         match p with
@@ -184,5 +185,4 @@ module DiscordHelper =
         | PingType.Here -> "@here"
         | PingType.NoOne -> ""
 
-    let bprintfn (sb : StringBuilder) =
-        Printf.kprintf (fun s -> sb.AppendLine s |> ignore)
+    let bprintfn (sb : StringBuilder) = Printf.kprintf (fun s -> sb.AppendLine s |> ignore)

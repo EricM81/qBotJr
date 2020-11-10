@@ -7,6 +7,6 @@ module Creator =
 
 //type cmdGuildFunc = (SocketMessage) -> (SocketGuildChannel) -> (SocketGuildUser) -> unit 
 
-    let HiJr = Command.create "HI JR" UserPermission.Creator (fun _ y -> DiscordHelper.sendMsg y.Channel "hey pop!" |> ignore) DiscordHelper.reactDistrust
+    let HiJr = Command.create "HI JR" UserPermission.Creator (fun _ y -> discord.sendMsg y.Channel "hey pop!" |> ignore) discord.reactDistrust
     
         

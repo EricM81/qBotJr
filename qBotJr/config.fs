@@ -32,15 +32,11 @@ type config() =
         sw.Flush()
         sw.Close()
 
-
-
     static let loadBotSettings =
         use f = File.Open(Directory.GetCurrentDirectory() + "\\settings.json", FileMode.Open, FileAccess.Read)
         use sr = new StreamReader(f)
-
         let tmp2 = JsonConvert.DeserializeObject<BotSettings>(sr.ReadToEnd())
         sr.Close()
-
         tmp2
 
     static member BotSettings = loadBotSettings
@@ -56,22 +52,3 @@ type config() =
     static member SetGuildSettings(guildSettings : GuildSettings) =
         saveGuild guildSettings
         guilds.Item(guildSettings.GuildID) <- guildSettings
-
-
-
-
-
-
-
-//static member
-
-
-
-
-//save settings for later
-//let f = File.Open(Directory.GetCurrentDirectory() + "\settings.json", FileMode.OpenOrCreate, FileAccess.Write)
-//let sw = new StreamWriter(f)
-//let str = JsonConvert.SerializeObject(tmp)
-//sw.Write str
-//sw.Close ()
-//f.Close ()

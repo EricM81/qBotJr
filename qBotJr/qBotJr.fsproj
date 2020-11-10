@@ -11,19 +11,18 @@
     <None Include="settings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <Compile Include="Types\ServiceT.fs" />
-    <Compile Include="Types\CommandT.fs" />
     <Compile Include="Types\ConfigT.fs" />
-    <Compile Include="Types\State.fs" />
-    <Compile Include="Types\DiscordT.fs" />
-    <Compile Include="Emojis.fs" />
+    <Compile Include="Types\ServerT.fs" />
+    <Compile Include="Types\ClientT.fs" />
+    <Compile Include="Types\StateT.fs" />
+    <Compile Include="emojis.fs" />
     <Compile Include="config.fs" />
     <Compile Include="helper.fs" />
     <Compile Include="logger.fs" />
-    <Compile Include="DiscordHelper.fs" />
-    <Compile Include="CommandParser.fs" />
-    <Compile Include="AsyncClient.fs" />
-    <Compile Include="StateFuncs.fs" />
+    <Compile Include="discord.fs" />
+    <Compile Include="parser.fs" />
+    <Compile Include="client.fs" />
+    <Compile Include="stateFun.fs" />
     <Compile Include="CommandFilters\Creator.fs" />
     <Compile Include="CommandFilters\qBot.fs" />
     <Compile Include="CommandFilters\qHere.fs" />
