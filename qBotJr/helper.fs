@@ -37,9 +37,9 @@ module helper =
         | Continue T' -> f T'
         | Found U' -> Found U'
 
-    let inline runCont f y x =
-        match x with
-        | Found U' -> f y U'
+    let inline runCont f a b c d e =
+        match e with
+        | Found e' -> f a b c d e'
         | _ -> ()
 
     //if no perm has been found for a user, keep searching

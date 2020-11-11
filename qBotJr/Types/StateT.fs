@@ -13,12 +13,12 @@ type State =
     static member create =
         {State.Servers = Map.empty; cmdCreatorFilters = Array.empty; cmdStaticFilters = Array.empty; cmdTempFilters = []; rtServerFilters = []; rtTempFilters = []}
 
-type ScheduledTask = delegate of byref<State> -> unit
+type AsyncTask = delegate of byref<State> -> unit
 
 type MailboxMessage =
     | NewMessage of NewMessage
     | MessageReaction of MessageReaction
-    | Task of ScheduledTask
+    | Task of AsyncTask
     static member createMessage goo msg : MailboxMessage =
         NewMessage (NewMessage.create msg goo)
     static member createReaction  msg reaction isAdd goo : MailboxMessage=

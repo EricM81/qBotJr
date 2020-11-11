@@ -23,8 +23,8 @@ type Mode =
     {
     Name : string
     HereMsg : HereMessage
-    mutable PlayerIDs : uint64 list
-    mutable PlayerListIsDirty : bool
+    PlayerIDs : uint64 list
+    PlayerListIsDirty : bool
     }
 
 type Server =

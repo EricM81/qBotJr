@@ -11,13 +11,34 @@ open qBotJr.helper
 //Threadsafe MailboxProcessor to filter commands and update state
 module client =
 
+    /// examples for maintaining state in F# are lacking, but I needs it
+    ///
+    /// the MailboxProcessor makes incoming messages single threaded, which gives
+    /// thread safety but also creates a bottleneck.
+    ///
+    /// some fields on records held in the State obj are mutable, but they were
+    /// chosen judiciously like marking something as dirty (akin to needing to redraw the UI)
+    /// most are immutable and need to update the state field
+    ///
+    /// functions that do something with user input have 3 options :
+    /// |> function
+    /// | Done () -> ()   //Block the mailbox thread to quickly update mutable fields
+    /// | Async a -> Async.Start a   //Run Async<unit> and update with an AsyncTask -> byref<State> -> ()
+    /// | Server server' -> state.Servers <- state.Servers |> Map.add server'.Guild.Id server'
+    ///         //Block the mailbox and update an entire record
+    ///
+    /// to keep byref<State> from every being handled by any other thread,
+    /// ** state is a mutable value type **
     let mutable private state = State.create
 
     type private FoundMessage = Command * MessageFilter option
     type private FoundReaction = ReactionAction * ReactionFilter option
 
+    /// these are you normal discord commands.  this bot uses 'q' as a prefix, but also allows for a
+    /// temporary filter on any input.  for example, if someone runs qHere but forgets to specify a
+    /// parameter, I can reply back that they need to specify -e to ping @everyone or -h for @here to
+    /// keep them from having to retype an entire command
     module private command =
-
 
         let inline parseMsg (cmd : Command) (msg : SocketMessage) =
             parseInput cmd.PrefixUpper msg.Content |> ParsedMsg.create msg
@@ -73,6 +94,10 @@ module client =
             | Some fm -> Found fm
             | None -> Continue nm
 
+    /// admins will learn and run commands, but I didn't want to force every user to have to do the same
+    /// user actions, like signaling they want to play, are handled through reactions to announcement messages
+    /// I also wanted the ability to let a command with insufficient info to accept a reaction for a missing param
+    /// which uses temporary filters like command
     module private reaction =
 
         let inline matchReaction (emoji : string) (item : ReAction) : ReactionAction option =
@@ -112,6 +137,10 @@ module client =
             | Some fr -> Found fr
             | _ -> Continue mr
 
+    let inline private add1ServerTTL (server : Server) = server.TTL <- DateTimeOffset.Now.AddHours(1.0)
+    let inline private expireMsgFilterTTL (filter : MessageFilter) = filter.TTL <- DateTimeOffset.MinValue
+    let inline private expireRtFilterTTL (filter : ReactionFilter) = filter.TTL <- DateTimeOffset.MinValue
+
     let private getServer (guild : SocketGuild) =
         state.Servers
         |> Map.tryFind guild.Id
@@ -119,31 +148,23 @@ module client =
         | Some s -> s
         | None -> Server.create guild
 
-    let private updateServerTTL (server : Server) = server.TTL <- DateTimeOffset.Now.AddHours(1.0)
-
-    let runCommand (nm : NewMessage) ((cmd, filter) : FoundMessage) =
-        match filter with
-        | None -> ()
-        | Some f -> f.TTL <- DateTimeOffset.MinValue
-        let server = getServer nm.Goo.Guild
-        if cmd.RequiredPerm = UserPermission.Admin then
-            updateServerTTL server
+    let inline private execCmd nm (cmd : Command) server =
+        if cmd.RequiredPerm = UserPermission.Admin then add1ServerTTL server
         command.checkPermAndRun cmd nm server
-        |> function
-        | Done () -> ()
-        | Async a -> Async.Start a
-        | Server s -> state.Servers <- state.Servers |> Map.add s.Guild.Id s
 
-    let runReaction (mr : MessageReaction) ((action, filter) : FoundReaction) : unit =
+    let inline private execRt mr action server  =
+        action mr server
+
+    let inline private run expireFun execFun x guild (y, filter) =
         match filter with
         | None -> ()
-        | Some f -> f.TTL <- DateTimeOffset.MinValue
-        getServer mr.Goo.Guild
-        |> action mr
+        | Some filter' -> expireFun filter'
+        let server = getServer guild
+        execFun x y server
         |> function
         | Done () -> ()
         | Async a -> Async.Start a
-        | Server s -> state.Servers <- state.Servers |> Map.add s.Guild.Id s
+        | Server server' -> state.Servers <- state.Servers |> Map.add server'.Guild.Id server'
 
     let private matchMailbox (mm : MailboxMessage) =
         match mm with
@@ -151,11 +172,11 @@ module client =
             command.searchStatic nm
             |> bindCont command.searchCreator
             |> bindCont command.searchTemp
-            |> runCont runCommand nm
+            |> runCont run expireMsgFilterTTL execCmd nm nm.Goo.Guild
         | MessageReaction mr ->
             reaction.searchServer mr
             |> bindCont reaction.searchTemp
-            |> runCont runReaction mr
+            |> runCont run expireRtFilterTTL execRt mr mr.Goo.Guild
         | Task t -> t.Invoke &state
 
     let private processMail (inbox : MailboxProcessor<MailboxMessage>) =
