@@ -43,10 +43,6 @@ module client =
         let inline parseMsg (cmd : Command) (msg : SocketMessage) =
             parseInput cmd.PrefixUpper msg.Content |> ParsedMsg.create msg
 
-        let checkPermAndRun (cmd : Command) (nm : NewMessage) (s : Server) =
-            let pm = parseMsg cmd nm.Message
-            let goo = nm.Goo
-            if (getPerm goo.User) >= cmd.RequiredPerm then cmd.PermSuccess pm goo s else cmd.PermFailure pm goo s
 
         let inline matchPrefix (cmd : Command) (nm : NewMessage) : bool =
             let str = nm.Message.Content
@@ -148,9 +144,11 @@ module client =
         | Some s -> s
         | None -> Server.create guild
 
-    let inline private execCmd nm (cmd : Command) server =
+    let inline private execCmd (nm : NewMessage) (cmd : Command) server =
         if cmd.RequiredPerm = UserPermission.Admin then add1ServerTTL server
-        command.checkPermAndRun cmd nm server
+        let pm = command.parseMsg cmd nm.Message
+        let goo = nm.Goo
+        if (getPerm goo.User) >= cmd.RequiredPerm then cmd.PermSuccess pm goo server else cmd.PermFailure pm goo server
 
     let inline private execRt mr action server  =
         action mr server
