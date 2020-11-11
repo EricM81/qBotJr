@@ -174,7 +174,7 @@ module client =
             reaction.searchServer mr
             |> bindCont reaction.searchTemp
             |> runCont run expireRtFilterTTL execRt mr mr.Goo.Guild
-        | Task t -> t.Invoke &state
+        | UpdateState t -> t.Invoke &state
 
     let private processMail (inbox : MailboxProcessor<MailboxMessage>) =
         let rec msgLoop () =
@@ -194,9 +194,3 @@ module client =
     //once a message is handled, it returns
     let Receive (mm : MailboxMessage) = agent.Post mm
 
-    let GetServer (guild : SocketGuild) : Server =
-        state.Servers
-        |> Map.tryFind guild.Id
-        |> function
-        | Some s -> s
-        | None -> Server.create guild

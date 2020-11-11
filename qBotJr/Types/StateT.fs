@@ -18,10 +18,10 @@ type AsyncTask = delegate of byref<State> -> unit
 type MailboxMessage =
     | NewMessage of NewMessage
     | MessageReaction of MessageReaction
-    | Task of AsyncTask
+    | UpdateState of AsyncTask
     static member createMessage goo msg : MailboxMessage =
         NewMessage (NewMessage.create msg goo)
     static member createReaction  msg reaction isAdd goo : MailboxMessage=
         MessageReaction (MessageReaction.create msg reaction isAdd goo)
     static member createTask i : MailboxMessage =
-        Task i
+        UpdateState i

@@ -6,7 +6,7 @@ open qBotJr.T
 
 module stateFun =
 
-    let inline private addToMM task = Task task |> client.Receive
+    let inline private addToMM task = UpdateState task |> client.Receive
 
     let AddMessageFilter (mf : MessageFilter) =
         AsyncTask(fun state -> state.cmdTempFilters <- mf :: state.cmdTempFilters) |> addToMM
