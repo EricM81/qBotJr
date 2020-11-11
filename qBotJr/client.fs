@@ -92,7 +92,7 @@ module client =
     /// admins will learn and run commands, but I didn't want to force every user to have to do the same
     /// user actions, like signaling they want to play, are handled through reactions to announcement messages
     /// I also wanted the ability to let a command with insufficient info to accept a reaction for a missing param
-    /// which uses temporary filters like command
+    /// which uses temporary filters (just like temp command filter, i.e. react ⚽ for -e, 🏈 for -h)
     module private reaction =
 
         let inline matchReaction (emoji : string) (item : ReAction) : ReactionAction option =
