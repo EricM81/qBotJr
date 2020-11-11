@@ -43,7 +43,6 @@ module client =
         let inline parseMsg (cmd : Command) (msg : SocketMessage) =
             parseInput cmd.PrefixUpper msg.Content |> ParsedMsg.create msg
 
-
         let inline matchPrefix (cmd : Command) (nm : NewMessage) : bool =
             let str = nm.Message.Content
             let i = cmd.PrefixLength
