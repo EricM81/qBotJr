@@ -14,12 +14,20 @@ module stateFun =
     let AddReactionFilter (rf : ReactionFilter) =
         AsyncTask(fun state -> state.rtTempFilters <- rf :: state.rtTempFilters) |> addToMM
 
+    let private findAndExpireTmp (state : State) (now : DateTimeOffset) (serverID : uint64) (server : Server) =
+        if server.TTL > now then
+            true
+        else
+            state.rtServerFilters
+            |> List.iter (fun filter -> if filter.GuildID = serverID then filter.TTL <- DateTimeOffset.MinValue)
+            false
+
     let CleanUp () =
         AsyncTask(fun state ->
             let now = DateTimeOffset.Now
-            state.Servers <- state.Servers |> Map.filter (fun _ v -> v.TTL > now)
-            //todo remove state.rtServerFilters
+            state.Servers <- state.Servers |> Map.filter (findAndExpireTmp state now)
             state.cmdTempFilters <- state.cmdTempFilters |> List.filter (fun filter -> filter.TTL > now)
+            state.rtServerFilters <- state.rtServerFilters |> List.filter (fun filter -> filter.TTL > now)
             state.rtTempFilters <- state.rtTempFilters |> List.filter (fun filter -> filter.TTL > now))
         |> addToMM
 

@@ -11,23 +11,24 @@ open qBotJr.helper
 //Threadsafe MailboxProcessor to filter commands and update state
 module client =
 
-    /// examples for maintaining state in F# are lacking, but I needs it
+    /// examples for maintaining state in F# are lacking, but I needs it.
     ///
     /// the MailboxProcessor makes incoming messages single threaded, which gives
     /// thread safety but also creates a bottleneck.
     ///
-    /// some fields on records held in the State obj are mutable, but they were
-    /// chosen judiciously like marking something as dirty (akin to needing to redraw the UI)
-    /// most are immutable and need to update the state field
+    /// some fields on records held in State are mutable, but they were chosen
+    /// judiciously - like TTL's or isDirty flags (akin to marking for GC or needing
+    /// to redraw the UI). most are immutable and need to safely update the entire record
+    /// held in state.
     ///
-    /// functions that do something with user input have 3 options :
+    /// functions that do something with user input have 3 options (ActionResult) :
     /// |> function
-    /// | Done () -> ()   //Block the mailbox thread to quickly update mutable fields
-    /// | Async a -> Async.Start a   //Run Async<unit> and update with an AsyncTask -> byref<State> -> ()
+    /// | Done () -> ()              //Blocks the mailbox thread to quickly update mutable fields.
+    /// | Async a -> Async.Start a   //Run on threadpool; has to register back with mailbox (AsyncTask -> byref<State> -> ()).
     /// | Server server' -> state.Servers <- state.Servers |> Map.add server'.Guild.Id server'
-    ///         //Block the mailbox and update an entire record
+    ///                              //Block the mailbox and add/update an entire record.
     ///
-    /// to keep byref<State> from every being handled by any other thread,
+    /// to keep byref<State> from ever being handled by any other thread,
     /// ** state is a mutable value type **
     let mutable private state = State.create
 
@@ -116,7 +117,7 @@ module client =
             state.rtServerFilters
             |> List.tryPick searchFun
             |> function
-            | Some (action, _) -> Found(action, None)
+            | Some (action, _) -> Found(action, None) //ignore the filter (TTL), expires when the server is removed from state
             | _ -> Continue mr
 
         let searchTemp (mr : MessageReaction) : ContinueOption<MessageReaction, FoundReaction> =
