@@ -154,19 +154,11 @@ module discord =
         guild.CategoryChannels |> Seq.tryFind (fun y -> y.Name = name)
 
 
-    let getChannelByID (id : uint64 option) : SocketGuildChannel option =
-
-        match id with
-        | Some x ->
-            let channel = client.GetChannel x
-            match channel with
-            | null -> None
-            | y ->
-                match y with
-                | :? SocketGuildChannel as z -> Some z
-                | _ -> None
-        | None -> None
-
+    let getChannelByID (id : uint64) : SocketGuildChannel option =
+        let channel = client.GetChannel id
+        match channel with
+        | :? SocketGuildChannel as z -> Some z
+        | _ -> None
 
     let getChannelByName (guild : SocketGuild) (name : string) : SocketGuildChannel option =
         guild.Channels |> Seq.tryFind (fun y -> y.Name = name)
@@ -176,8 +168,8 @@ module discord =
         | :? SocketTextChannel as x -> x.SendMessageAsync msg |> Async.AwaitTask |> Some
         | _ -> None
 
-    let reactDistrust (parsedM : ParsedMsg) (_ : GuildOO) : unit =
-        emojis.Distrust |> Emoji |> parsedM.Message.AddReactionAsync |> Async.AwaitTask |> ignore
+    let reactDistrust (_ : Server) (_ : GuildOO) (parsedM : ParsedMsg) : ActionResult =
+        emojis.Distrust |> Emoji |> parsedM.Message.AddReactionAsync |> Async.AwaitTask |> ignore |> Done
 
     let pingToString (p : PingType) =
         match p with

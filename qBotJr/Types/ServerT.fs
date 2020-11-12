@@ -55,9 +55,18 @@ type qBotParameters =
     static member create admins captains cat = { AdminRoles = admins ; CaptainRoles = captains ; LobbiesCategory = cat }
 
 [<Struct>]
-type qHereParameters =
+type qHereArgs =
     {
+    AnnounceID : uint64 option
     Ping : PingType option
-    Announcements : uint64 option
     }
-    static member create ping announcements = { qHereParameters.Ping = ping ; Announcements = announcements }
+    static member create  announcements ping = { qHereArgs.Ping = ping ; AnnounceID = announcements }
+
+[<Struct>]
+type qHereArgsValidated =
+    {
+    AnnounceID : uint64
+    Ping : PingType
+
+    }
+    static member create announcements ping = { qHereArgsValidated.Ping = ping ; AnnounceID = announcements }

@@ -64,8 +64,8 @@ type ActionResult =
     | Async of Async : Async<unit>
     | Server of Server : Server
 
-type MessageAction = ParsedMsg -> GuildOO -> Server -> ActionResult
-type ReactionAction = MessageReaction -> Server -> ActionResult
+type MessageAction = Server -> GuildOO -> ParsedMsg -> ActionResult
+type ReactionAction = Server -> MessageReaction -> ActionResult
 
 [<Struct>]
 type ReAction =

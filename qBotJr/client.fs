@@ -8,7 +8,7 @@ open qBotJr.parser
 open qBotJr.helper
 
 
-//Threadsafe MailboxProcessor to filter commands and update state
+//Thread-safe MailboxProcessor to filter commands and update state
 module client =
 
     /// examples for maintaining state in F# are lacking, but I needs it.
@@ -23,10 +23,10 @@ module client =
     ///
     /// functions that do something with user input have 3 options (ActionResult) :
     /// |> function
-    /// | Done () -> ()              //Blocks the mailbox thread to quickly update mutable fields.
-    /// | Async a -> Async.Start a   //Run on threadpool; has to register back with mailbox (AsyncTask -> byref<State> -> ()).
+    /// | Done () -> ()              //For quick updates mutable fields.
+    /// | Async a -> Async.Start a   //Run in thread pool; register update with mailbox (AsyncTask -> byref<State> -> ()).
     /// | Server server' -> state.Servers <- state.Servers |> Map.add server'.Guild.Id server'
-    ///                              //Block the mailbox and add/update an entire record.
+    ///                              //Fast enough to not justify thread switch, but require a full add/update on record.
     ///
     /// to keep byref<State> from ever being handled by any other thread,
     /// ** state is a mutable value type **
@@ -99,36 +99,34 @@ module client =
         let inline matchReaction (emoji : string) (item : ReAction) : ReactionAction option =
             if item.Emoji = emoji then Some item.Action else None
 
-        let matchList (emoji : string) (items : ReAction list) : ReactionAction option =
+        let inline matchFilterActions (emoji : string) (items : ReAction list) : ReactionAction option =
             items |> List.tryPick (fun item -> matchReaction emoji item)
 
-        let matchFilter (msg : uint64) (user : uint64) (emoji : string) (filter : ReactionFilter) : FoundReaction option =
+        let inline matchFilter (msgID : uint64) (userID : uint64) (emoji : string) (filter : ReactionFilter) : FoundReaction option =
             match filter.MessageID, filter.UserID with
-            | fMsg, None when fMsg = msg -> matchList emoji filter.Items
-            | fMsg, Some fUser when fMsg = msg && fUser = user -> matchList emoji filter.Items
+            | fMsg, None when fMsg = msgID -> matchFilterActions emoji filter.Items
+            | fMsg, Some fUser when fMsg = msgID && fUser = userID -> matchFilterActions emoji filter.Items
             | _ -> None
             |> function
             | Some react -> Some(react, Some filter)
             | _ -> None
 
+        let searchList (mr : MessageReaction) (items : ReactionFilter list) : FoundReaction option =
+            let msgID = mr.Message.Id
+            let userID = mr.Reaction.UserId
+            let emoji = mr.Reaction.Emote.Name
+            let now = DateTimeOffset.Now
+            items |> List.tryPick (fun item -> if item.TTL > now then matchFilter msgID userID emoji item else None)
+
+
         let searchServer (mr : MessageReaction) : ContinueOption<MessageReaction, FoundReaction> =
-            let searchFun (filter : ReactionFilter) =
-                matchFilter mr.Message.Id mr.Reaction.UserId mr.Reaction.Emote.Name filter
-            state.rtServerFilters
-            |> List.tryPick searchFun
+            searchList mr state.rtServerFilters
             |> function
-            | Some (action, _) -> Found(action, None) //ignore the filter (TTL), expires when the server is removed from state
+            | Some (action, _) -> Found(action, None) //remove the filter so TTL only expires when the server expires
             | _ -> Continue mr
 
         let searchTemp (mr : MessageReaction) : ContinueOption<MessageReaction, FoundReaction> =
-            //check filters collection
-            let searchFun (filter : ReactionFilter) =
-                if filter.TTL > DateTimeOffset.Now then
-                    matchFilter mr.Message.Id mr.Reaction.UserId mr.Reaction.Emote.Name filter
-                else
-                    None
-            state.rtTempFilters
-            |> List.tryPick searchFun
+            searchList mr state.rtTempFilters
             |> function
             | Some fr -> Found fr
             | _ -> Continue mr
@@ -144,21 +142,21 @@ module client =
         | Some s -> s
         | None -> Server.create guild
 
-    let inline private execCmd (nm : NewMessage) (cmd : Command) server =
+    let inline private execCmd (cmd : Command) server (nm : NewMessage)  =
         if cmd.RequiredPerm = UserPermission.Admin then add1ServerTTL server
         let pm = command.parseMsg cmd nm.Message
         let goo = nm.Goo
-        if (getPerm goo.User) >= cmd.RequiredPerm then cmd.PermSuccess pm goo server else cmd.PermFailure pm goo server
+        if (getPerm goo.User) >= cmd.RequiredPerm then cmd.PermSuccess server goo pm else cmd.PermFailure server goo pm
 
-    let inline private execRt mr action server  =
-        action mr server
+    let inline private execRt action server mr =
+        action server mr
 
-    let inline private run expireFun execFun x guild (y, filter) =
+    let inline private run expireFun execFun args guild (filterFun, filter) =
         match filter with
         | None -> ()
         | Some filter' -> expireFun filter'
         let server = getServer guild
-        execFun x y server
+        execFun filterFun server args
         |> function
         | Done () -> ()
         | Async a -> Async.Start a
@@ -195,3 +193,9 @@ module client =
     //once a message is handled, it returns
     let Receive (mm : MailboxMessage) = agent.Post mm
 
+    //Can add to F# linked lists without worrying about thread safety
+    let AddMessageFilter (filter : MessageFilter) : unit =
+        state.cmdTempFilters <- filter :: state.cmdTempFilters
+
+    let AddReactionFilter (filter : ReactionFilter) : unit =
+        state.rtTempFilters <- filter :: state.rtTempFilters
