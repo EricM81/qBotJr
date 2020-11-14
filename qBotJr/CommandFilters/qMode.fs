@@ -5,53 +5,59 @@ open qBotJr.T
 open FSharp.Control
 open System.Collections.Generic
 
-module qMode = 
+module qMode =
 
-//type cmdGuildFunc = (SocketMessage) -> (SocketGuildChannel) -> (SocketGuildUser) -> unit 
+//type cmdGuildFunc = (SocketMessage) -> (SocketGuildChannel) -> (SocketGuildUser) -> unit
 
     let str = "QMODE"
-  
+
     let Run  (pm : ParsedMsg) (goo : GuildOO) : unit =
         ()
-    
+
     let noPerms  (pm : ParsedMsg) (goo : GuildOO) : unit =
         ()
-        
-    let collectMsgs (acc) (KeyValue(k,v) : KeyValuePair<uint64, Server>) = //: Async<(RestUserMessage * Player list)> list=
-        match v.HereMsg with
-        | Some msg ->
-            let x = 
-                async
-                    {
-                        let tmp : System.Collections.Generic.IAsyncEnumerable<IEnumerable<IUser>> =
-                            downcast msg.GetReactionUsersAsync(Emoji (Emojis.RaiseHands), 1000)
-                        let! reactions =
-                            AsyncEnumerableExtensions.FlattenAsync tmp
-                            |> Async.AwaitTask
-                        return (reactions, v)
-                    }
-            x::acc
-        | _ -> acc
-        
-       
-    let processPlayerReactions currentServers =
-    
-        //get server's qhere's
-        let values = 
-            currentServers 
-            |> Seq.fold collectMsgs []
-            |> FSharpx.Control.Async.ParallelWithThrottle 4
-            |> Async.RunSynchronously
-        for value in values do
-            let (reaction, server) = value
-            server.Players
-            |> List.iter (fun p ->
-                p.isHere <-
-                    reaction
-                    |> Seq.exists (fun x ->
-                        if x.Id = p.UID then true else false)
-                )
-            
+//
+//    let collectMsgs (acc) (KeyValue(k,v) : KeyValuePair<uint64, Server>) = //: Async<(RestUserMessage * Player list)> list=
+//        match v.HereMsg with
+//        | Some msg ->
+//            let x =
+//                async
+//                    {
+//                        let tmp : System.Collections.Generic.IAsyncEnumerable<IEnumerable<IUser>> =
+//                            downcast msg.GetReactionUsersAsync(Emoji (Emojis.RaiseHands), 1000)
+//                        let! reactions =
+//                            AsyncEnumerableExtensions.FlattenAsync tmp
+//                            |> Async.AwaitTask
+//                        return (reactions, v)
+//                    }
+//            x::acc
+//        | _ -> acc
+//
+//
+//    let processPlayerReactions currentServers =
+//
+//        //get server's qhere's
+//        let values =
+//            currentServers
+//            |> Seq.fold collectMsgs []
+//            |> FSharpx.Control.Async.ParallelWithThrottle 4
+//            |> Async.RunSynchronously
+//        for value in values do
+//            let (reaction, server) = value
+//            server.PlayersHere
+//            |> List.iter (fun p ->
+//                p.isHere <-
+//                    reaction
+//                    |> Seq.exists (fun x ->
+//                        if x.Id = p.UID then true else false)
+//                )
+
+
+
+
+
+
+
 //' Discord.AsyncEnumerableExtensions
 //''' <summary> Flattens the specified pages into one <see cref="T:System.Collections.Generic.IEnumerable`1" /> asynchronously. </summary>
 //' Token: 0x060003A5 RID: 933 RVA: 0x000055E8 File Offset: 0x000037E8

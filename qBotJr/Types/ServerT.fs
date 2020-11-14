@@ -1,51 +1,75 @@
 ﻿namespace qBotJr.T
 
 open System
+open Discord
 open Discord.WebSocket
 open Discord.Rest
 
+[<Struct>]
 type Player =
     {
-    UID : uint64
-    Name : string
-    mutable GamesPlayed : byte
+        ID : uint64
+        Name : string
+    }
+    static member create (user : IGuildUser) =
+        let name = if (String.IsNullOrEmpty user.Nickname) then user.Username else user.Nickname
+        { ID = user.Id; Name = name }
+//ref type
+type PlayerHere =
+    {
+    Player : Player
+    mutable GamesPlayed : int16
     mutable isHere : bool
     mutable isBanned : bool
     }
-    static member create uid name =
-        { Player.UID = uid ; Name = name ; GamesPlayed = 1uy ; isHere = true ; isBanned = false }
+    static member create (user : IGuildUser) here =
+        { PlayerHere.Player = Player.create user ; GamesPlayed = 0s ; isHere = here ; isBanned = false }
 
-type Lobby = { Name : string ; Channel : SocketGuildChannel ; mutable PlayerIDs : uint64 list }
+//ref type
+type Lobby = { Name : string ; Channel : SocketGuildChannel ; mutable Players : Player list }
 
-type HereMessage = { MessageID : uint64 ; Emoji : string ; RestMsg : RestMessage }
+[<Struct>] //val type
+type HereMessage =
+    {
+    MessageID : uint64
+    Emoji : string
+    RestMsg : RestUserMessage
+    Header : string
+    }
+    static member create (restMsg : RestUserMessage) emoji annHeader =
+        {MessageID = restMsg.Id; Emoji = emoji; RestMsg = restMsg; Header = annHeader}
 
+//ref type
 type Mode =
     {
     Name : string
     HereMsg : HereMessage
-    PlayerIDs : uint64 list
+    Players : Player list
     PlayerListIsDirty : bool
     }
 
+//ref type
 type Server =
     {
+    GuildID : uint64
     Guild : SocketGuild
     mutable TTL : DateTimeOffset
     HereMsg : HereMessage option
-    Lobbies : Lobby list
-    Players : Player list
+    PlayersHere : PlayerHere list
     mutable PlayerListIsDirty : bool
+    Lobbies : Lobby list
     Modes : Mode list
     }
-    static member create guild =
-        {Guild = guild; TTL = DateTimeOffset.Now.AddHours(1.0); HereMsg = None; Lobbies = []; Players = []; PlayerListIsDirty = false; Modes = []}
+    static member create (guild : SocketGuild) =
+        {Server.GuildID = guild.Id; Guild = guild; TTL = DateTimeOffset.Now.AddHours(1.0); HereMsg = None; Lobbies = []; PlayersHere = []; PlayerListIsDirty = false; Modes = []}
 
-
+//val type
 type PingType =
-    | Everyone
-    | Here
-    | NoOne
+    | Everyone = 0
+    | Here = 1
+    | NoOne = 2
 
+[<Struct>] //val type
 type qBotParameters =
     {
     AdminRoles : uint64 list
@@ -54,7 +78,7 @@ type qBotParameters =
     }
     static member create admins captains cat = { AdminRoles = admins ; CaptainRoles = captains ; LobbiesCategory = cat }
 
-[<Struct>]
+[<Struct>] //val type
 type qHereArgs =
     {
     AnnounceID : uint64 option
@@ -62,11 +86,11 @@ type qHereArgs =
     }
     static member create  announcements ping = { qHereArgs.Ping = ping ; AnnounceID = announcements }
 
-[<Struct>]
+[<Struct>] //val type
 type qHereArgsValidated =
     {
-    AnnounceID : uint64
+    Announcements : SocketTextChannel
     Ping : PingType
-
+    Emoji : string
     }
-    static member create announcements ping = { qHereArgsValidated.Ping = ping ; AnnounceID = announcements }
+    static member create announcements ping emoji = { qHereArgsValidated.Ping = ping ; Announcements = announcements; Emoji = emoji}

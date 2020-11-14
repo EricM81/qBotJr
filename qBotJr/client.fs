@@ -4,6 +4,7 @@ open System
 open Discord.WebSocket
 open FSharpx.Control
 open qBotJr.T
+open qBotJr.discord
 open qBotJr.parser
 open qBotJr.helper
 
@@ -25,7 +26,7 @@ module client =
     /// |> function
     /// | Done () -> ()              //For quick updates mutable fields.
     /// | Async a -> Async.Start a   //Run in thread pool; register update with mailbox (AsyncTask -> byref<State> -> ()).
-    /// | Server server' -> state.Servers <- state.Servers |> Map.add server'.Guild.Id server'
+    /// | Server server' -> state.Servers <- state.Servers |> Map.add server'.GuildID server'
     ///                              //Fast enough to not justify thread switch, but require a full add/update on record.
     ///
     /// to keep byref<State> from ever being handled by any other thread,
@@ -83,7 +84,7 @@ module client =
 
         let searchTemp (nm : NewMessage) : ContinueOption<NewMessage, FoundMessage> =
             let now = DateTimeOffset.Now
-            let msgGuild = nm.Goo.Guild.Id
+            let msgGuild = nm.Goo.GuildID
             state.cmdTempFilters
             |> List.tryPick (fun filter -> if filter.TTL > now then matchFilter msgGuild nm filter else None)
             |> function
@@ -135,12 +136,6 @@ module client =
     let inline private expireMsgFilterTTL (filter : MessageFilter) = filter.TTL <- DateTimeOffset.MinValue
     let inline private expireRtFilterTTL (filter : ReactionFilter) = filter.TTL <- DateTimeOffset.MinValue
 
-    let private getServer (guild : SocketGuild) =
-        state.Servers
-        |> Map.tryFind guild.Id
-        |> function
-        | Some s -> s
-        | None -> Server.create guild
 
     let inline private execCmd (cmd : Command) server (nm : NewMessage)  =
         if cmd.RequiredPerm = UserPermission.Admin then add1ServerTTL server
@@ -151,17 +146,23 @@ module client =
     let inline private execRt action server mr =
         action server mr
 
+    let inline private updateServer (server : Server option) =
+        match server with
+        | Some s -> state.Servers <- state.Servers |> Map.add s.GuildID s
+        | None -> ()
+
     let inline private run expireFun execFun args guild (filterFun, filter) =
         match filter with
         | None -> ()
         | Some filter' -> expireFun filter'
-        let server = getServer guild
+        let server = getServer state.Servers guild
         execFun filterFun server args
-        |> function
-        | Done () -> ()
-        | Async a -> Async.Start a
-        | Server server' -> state.Servers <- state.Servers |> Map.add server'.Guild.Id server'
+        |> updateServer
 
+    //todo 99.9999% of NewMessages and MessageReactions are not a match.
+    //Add a non-thread-safe method just for matching to reduce the entries placed in the mailbox.
+    //They can be matched a second time using the mailbox to ensure it's still valid
+    //(in case the state changed during the context switch)
     let private matchMailbox (mm : MailboxMessage) =
         match mm with
         | NewMessage nm ->
@@ -199,3 +200,7 @@ module client =
 
     let AddReactionFilter (filter : ReactionFilter) : unit =
         state.rtTempFilters <- filter :: state.rtTempFilters
+
+    let AddServerReactionFiler (filter : ReactionFilter) : unit =
+        state.rtServerFilters <- filter :: state.rtServerFilters
+

@@ -1,5 +1,16 @@
 namespace qBotJr.T
 
+open System
+
+
+
+type MessageUpdate =
+    {
+    GuildID : uint64
+    MessageID : uint64
+    Action : Action
+    }
+
 [<Struct>]
 type State =
     {

@@ -4,7 +4,7 @@ open Discord
 open Discord.WebSocket
 
 
-[<Struct>]
+//ref type
 type CommandLineArgs =
     {
     Switch : char option
@@ -13,7 +13,7 @@ type CommandLineArgs =
     static member create switch values =
         {Switch = switch; Values = values}
 
-[<Struct>]
+[<Struct>] //val type
 type ParsedMsg =
     {
     Message : SocketMessage
@@ -22,22 +22,23 @@ type ParsedMsg =
     static member create  msg pArgs =
         {ParsedMsg.Message = msg; ParsedArgs = pArgs}
 
-[<Struct>]
+[<Struct>] //val type
 type UserPermission =
     | None = 0
     | Captain = 1
     | Admin = 2
     | Creator = 3
 
-[<Struct>]
+[<Struct>] //val type
 type GuildOO =
     {
+    GuildID : uint64
     Guild : SocketGuild
     Channel : SocketTextChannel
     User : IGuildUser //user of either the socket or rest variant
     }
-    static member create guild channel user  =
-        {Guild = guild;Channel = channel; User = user}
+    static member create (guild : SocketGuild) channel user  =
+        {GuildID = guild.Id; Guild = guild;Channel = channel; User = user}
 
 type NewMessage =
     {
@@ -59,24 +60,24 @@ type MessageReaction =
     static member create msg reaction isAdd goo =
         {MessageReaction.Goo = goo; Message = msg; Reaction = reaction; IsAdd = isAdd}
 
-type ActionResult =
-    | Done of Done : unit
-    | Async of Async : Async<unit>
-    | Server of Server : Server
+//[<Struct>] //val type
+//type ActionResult =
+//    | Done of unit : unit
+//    | UpdateServer of Server : Server
 
-type MessageAction = Server -> GuildOO -> ParsedMsg -> ActionResult
-type ReactionAction = Server -> MessageReaction -> ActionResult
+type MessageAction = Server -> GuildOO -> ParsedMsg -> Server option
+type ReactionAction = Server -> MessageReaction -> Server option
 
-[<Struct>]
+//ref type
 type ReAction =
     {
-
     Emoji : string
     Action : ReactionAction
     }
     static member create emoji action =
         {ReAction.Emoji = emoji; Action = action}
 
+//ref type
 type ReactionFilter =
     {
     GuildID : uint64
@@ -89,7 +90,7 @@ type ReactionFilter =
         {ReactionFilter.GuildID = guild; MessageID = msgID; TTL = ttl; UserID = uid; Items = items}
 
 
-[<Struct>]
+//ref type
 type Command =
     {
     PrefixUpper : string
@@ -101,6 +102,7 @@ type Command =
     static member create (prefix : string) perm success failure =
         {PrefixUpper = prefix.ToUpper(); PrefixLength = prefix.Length; RequiredPerm = perm; PermSuccess = success; PermFailure = failure}
 
+//ref type
 type MessageFilter =
     {
     GuildID : uint64

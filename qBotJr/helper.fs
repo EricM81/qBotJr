@@ -1,5 +1,9 @@
 ﻿namespace qBotJr
 
+open System
+open System.Text
+open Discord.WebSocket
+open qBotJr
 open qBotJr.T
 open Discord
 
@@ -7,14 +11,10 @@ open Discord
 module helper =
     let inline prepend xs x = x :: xs
 
-    //I'm not sure if resulting workflow steps should be asynchronous.
-    //The Discord.NET wrapper already handles all network communication asynchronously.
-    //If needed, it's easy to make everything async after being filtered. Change:
-    //CmdOption's "Completed" to "Completed of Async<unit>"
-    //bind's "Completed -> Completed" to "Completed z -> Completed z"
-    //The partial applications created in these functions:
-    //genericFail, noPermissions, and permissionsCheck
-    //Can be wrapped with async{} and let processMsg execute them
+    let inline bind f x =
+        match x with
+        | Some x -> f x
+        | None -> None
 
     [<StructuralEquality ; StructuralComparison>]
     [<Struct>]
@@ -22,20 +22,22 @@ module helper =
         | Continue of Continue : 'T
         | Found of Completed : 'U
 
-    let inline bind f x =
-        match x with
-        | Some x -> f x
-        | None -> None
-    //
-//    let inline bind2 f g x =
-//        match x with
-//        | Continue y -> f g y
-//        | Found y -> Found y
-
     let inline bindCont f x =
         match x with
         | Continue T' -> f T'
         | Found U' -> Found U'
+
+
+    [<StructuralEquality ; StructuralComparison>]
+    [<Struct>]
+    type Validate<'T, 'U> =
+        | Success of Success : 'T
+        | Fail of Fail : 'U
+
+    let inline bindValid f args isValid =
+        match isValid with
+        | Success T' -> f args T'
+        | Fail U' -> Fail U'
 
     let inline runCont f a b c d e =
         match e with
@@ -75,3 +77,49 @@ module helper =
         |> bindPerms isDiscordAdmin gUser
         |> bindPerms isGuildAdmin gUser
         |> bindPerms isGuildCaptain gUser
+
+    let bprintfn (sb : StringBuilder) = Printf.kprintf (fun s -> sb.AppendLine s |> ignore)
+
+    let printPlayer (ph : PlayerHere) =
+        let widthT = 20 //max width
+        let post =
+            match ph.isHere with
+            | true -> sprintf " (%i)" ph.GamesPlayed
+            | false -> " (afk)"
+        //length of GamesPlayed (" (%i)", x); games played (log10 + 1) + formatting (3 chars)
+        //let widthG = ph.GamesPlayed |> float |> Math.Log10 |> int16 |> int |> (+) 1 |> (+) 3
+        let widthP = post.Length
+        let widthR = widthT - widthP //remaining len for name
+        let widthN = ph.Player.Name.Length
+        let name' = if widthN > widthR then ph.Player.Name.Substring(0, widthR) else ph.Player.Name
+        name' + post + if widthR > widthN then String(' ', widthR - widthN) else ""
+
+    let printPlayersList (pHere : PlayerHere list) : string =
+        if pHere.Length > 0 then
+            let sb = StringBuilder()
+            sb.Append "Who's Here: \n```" |> ignore
+            let rec printPlayers (xs : PlayerHere list) (ys : PlayerHere list) =
+                match xs, ys with
+                | [], [] -> ()
+                | x :: xs, y :: ys ->
+                    printPlayer x + " | " +  printPlayer y |> sb.AppendLine |> ignore
+                    printPlayers xs ys
+                | x :: _, [] -> printPlayer x |> sb.AppendLine |> ignore
+                | [], y :: _ -> printPlayer y |> sb.AppendLine |> ignore
+            //todo the sort is not working
+            let players' = pHere |> List.sortBy (fun ph -> (not ph.isHere), ph.GamesPlayed, ph.Player.Name)
+            let (colB, colA) = players' |> List.splitAt (players'.Length / 2)
+            printPlayers colA colB
+            sb.Append "```" |> ignore
+            sb.ToString()
+        else ""
+
+    let getServer (servers: Map<uint64, Server>) (guild : SocketGuild) =
+        servers
+        |> Map.tryFind guild.Id
+        |> function
+        | Some s -> s
+        | None -> Server.create guild
+
+
+

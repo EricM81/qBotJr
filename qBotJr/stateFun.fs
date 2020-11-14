@@ -2,6 +2,10 @@
 
 open System
 open Discord
+open Discord
+open Discord
+open Discord.Rest
+open Discord.WebSocket
 open qBotJr.T
 
 module stateFun =
@@ -31,16 +35,50 @@ module stateFun =
             state.rtTempFilters <- state.rtTempFilters |> List.filter (fun filter -> filter.TTL > now))
         |> addToMM
 
-    let SetPlayerState (guild : uint64) (user : IGuildUser) (stateFunc : Player -> unit) =
+
+
+    let SetPlayerState (guild : uint64) (user : IGuildUser) (stateFunc : PlayerHere -> unit) =
         AsyncTask(fun state ->
             let server = state.Servers.Item guild
-            let p = server.Players |> List.tryFind (fun p -> p.UID = user.Id)
-            match p with
-            | Some p -> p
+            let ph = server.PlayersHere |> List.tryFind (fun ph -> ph.Player.ID = user.Id)
+            match ph with
+            | Some ph' -> ph'
             | None ->
-                let p = Player.create user.Id user.Nickname
-                state.Servers <- Map.add server.Guild.Id { server with Players = p :: server.Players } state.Servers
-                p
+                let ph' = PlayerHere.create user false
+                state.Servers <- Map.add server.Guild.Id { server with PlayersHere = ph' :: server.PlayersHere } state.Servers
+                ph'
             |> stateFunc
             server.PlayerListIsDirty <- true)
         |> addToMM
+
+
+//
+//    let AddHereMsg (server : Server) (rest : RestUserMessage) (emoji : string) (announceHeader : string) =
+//        AsyncTask(fun state ->
+//            //seed the reaction to say "I'm here"
+//            Emoji(emoji) |> rest.AddReactionAsync |> ignore
+//            //if replacing a hereMsg, remove old reaction filter and reset everyone's isHere
+//            match server.HereMsg with
+//            | Some msg ->
+//                state.rtServerFilters <- removeOldHereMsgFilter msg.MessageID state.rtServerFilters
+//                server.PlayersHere |> List.iter (fun player -> player.isHere <- false)
+//            | None -> ()
+//            //create new hereMsg
+//            state.Servers <-
+//                state.Servers
+//                |> Map.add server.GuildID {server with HereMsg = Some <| HereMessage.create rest.Id emoji rest announceHeader}
+//            //register filter for reactions
+//            [ ReAction.create emoji updateHereList ]
+//            |> ReactionFilter.create server.GuildID rest.Id DateTimeOffset.MaxValue None
+//            |> client.AddReactionFilter)
+//        |> addToMM
+
+//    let AddModeMsg (server : Server) (rest : RestUserMessage) (emoji : string) (anounceHeader : string) =
+//        AsyncTask (fun state ->
+//            Emoji(emoji) |> rest.AddReactionAsync |> ignore
+//            let server = state.Servers.Item guildID
+//             state.Servers <-
+//                state.Servers
+//                |> Map.add guildID {server with HereMsg = Some <| HereMessage.create rest.Id emoji rest announceHeader}
+//            )
+//        |> addToMM

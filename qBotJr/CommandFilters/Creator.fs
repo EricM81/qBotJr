@@ -3,10 +3,9 @@
 open qBotJr.T
 
 
-module Creator = 
+module Creator =
 
-//type cmdGuildFunc = (SocketMessage) -> (SocketGuildChannel) -> (SocketGuildUser) -> unit 
+//type cmdGuildFunc = (SocketMessage) -> (SocketGuildChannel) -> (SocketGuildUser) -> unit
 
-    let HiJr = Command.create "HI JR" UserPermission.Creator (fun _ y -> discord.sendMsg y.Channel "hey pop!" |> ignore) discord.reactDistrust
-    
-        
+    let HiJr = Command.create "HI JR" UserPermission.Creator (fun _ g _ -> discord.sendMsg g.Channel "hey pop!" |> ignore; None) discord.reactDistrust
+
