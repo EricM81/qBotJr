@@ -19,9 +19,9 @@
     <Compile Include="config.fs" />
     <Compile Include="helper.fs" />
     <Compile Include="logger.fs" />
-    <Compile Include="discord.fs" />
     <Compile Include="parser.fs" />
     <Compile Include="client.fs" />
+    <Compile Include="discord.fs" />
     <Compile Include="stateFun.fs" />
     <Compile Include="CommandFilters\Creator.fs" />
     <Compile Include="CommandFilters\qBot.fs" />

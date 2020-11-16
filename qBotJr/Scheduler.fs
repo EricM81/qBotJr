@@ -60,7 +60,7 @@ module Scheduler =
                         ) |> UpdateState |> client.Receive
                     return! msgLoop ()
                     }
-            msgLoop () |> Async.Start
+            msgLoop ()
 
     let init () =
         here.qHereMsgScheduler ()

@@ -16,6 +16,19 @@ module helper =
         | Some x -> f x
         | None -> None
 
+    let inline bindV f x =
+        match x with
+        | ValueSome x -> f x
+        | ValueNone -> ValueNone
+
+    let bindB f x =
+        match x with
+        | true -> f
+        | false -> false
+
+    let inline tuple x y =
+        x, y
+
     [<StructuralEquality ; StructuralComparison>]
     [<Struct>]
     type ContinueOption<'T, 'U> =
@@ -26,7 +39,6 @@ module helper =
         match x with
         | Continue T' -> f T'
         | Found U' -> Found U'
-
 
     [<StructuralEquality ; StructuralComparison>]
     [<Struct>]
@@ -80,8 +92,7 @@ module helper =
 
     let bprintfn (sb : StringBuilder) = Printf.kprintf (fun s -> sb.AppendLine s |> ignore)
 
-    let printPlayer (ph : PlayerHere) =
-        let widthT = 20 //max width
+    let printPlayer (widthT : int) (ph : PlayerHere) =
         let post =
             match ph.isHere with
             | true -> sprintf " (%i)" ph.GamesPlayed
@@ -95,20 +106,21 @@ module helper =
         name' + post + if widthR > widthN then String(' ', widthR - widthN) else ""
 
     let printPlayersList (pHere : PlayerHere list) : string =
+        let widthT = 17
         if pHere.Length > 0 then
             let sb = StringBuilder()
-            sb.Append "Who's Here: \n```" |> ignore
+            sb.Append "Who's Here: *Name (Games Played)* \n```" |> ignore
             let rec printPlayers (xs : PlayerHere list) (ys : PlayerHere list) =
                 match xs, ys with
                 | [], [] -> ()
                 | x :: xs, y :: ys ->
-                    printPlayer x + " | " +  printPlayer y |> sb.AppendLine |> ignore
+                    printPlayer widthT x + " | " +  printPlayer widthT y |> sb.AppendLine |> ignore
                     printPlayers xs ys
-                | x :: _, [] -> printPlayer x |> sb.AppendLine |> ignore
-                | [], y :: _ -> printPlayer y |> sb.AppendLine |> ignore
+                | x :: _, [] -> printPlayer widthT x |> sb.AppendLine |> ignore
+                | [], y :: _ -> String(' ', widthT) + " | " +  printPlayer widthT y |> sb.AppendLine |> ignore
             //todo the sort is not working
-            let players' = pHere |> List.sortBy (fun ph -> (not ph.isHere), ph.GamesPlayed, ph.Player.Name)
-            let (colB, colA) = players' |> List.splitAt (players'.Length / 2)
+            let players' = pHere |> List.sortBy (fun ph -> (not ph.isHere), ph.GamesPlayed, ph.Player.Name.ToUpper())
+            let (colA, colB) = players' |> List.splitAt (players'.Length / 2 + players'.Length % 2)
             printPlayers colA colB
             sb.Append "```" |> ignore
             sb.ToString()

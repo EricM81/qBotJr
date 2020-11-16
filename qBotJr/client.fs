@@ -2,9 +2,7 @@
 
 open System
 open Discord.WebSocket
-open FSharpx.Control
 open qBotJr.T
-open qBotJr.discord
 open qBotJr.parser
 open qBotJr.helper
 
@@ -91,6 +89,7 @@ module client =
             | Some fm -> Found fm
             | None -> Continue nm
 
+
     /// admins will learn and run commands, but I didn't want to force every user to have to do the same
     /// user actions, like signaling they want to play, are handled through reactions to announcement messages
     /// I also wanted the ability to let a command with insufficient info to accept a reaction for a missing param
@@ -159,6 +158,24 @@ module client =
         execFun filterFun server args
         |> updateServer
 
+    //99.99999% of incoming traffic should be ignored
+    //letting async tasks on the thread pool do a check
+    //before placing something into the Mailbox.
+    let TestMsgFilters (msg : NewMessage) =
+        command.searchStatic msg
+        |> bindCont command.searchCreator
+        |> bindCont command.searchTemp
+        |> function
+        | Found _ -> true
+        | Continue _ -> false
+
+    let TestRtFilters (mr : MessageReaction) =
+        reaction.searchServer mr
+        |> bindCont reaction.searchTemp
+        |> function
+        | Found _ -> true
+        | Continue _ -> false
+
     //todo 99.9999% of NewMessages and MessageReactions are not a match.
     //Add a non-thread-safe method just for matching to reduce the entries placed in the mailbox.
     //They can be matched a second time using the mailbox to ensure it's still valid
@@ -187,7 +204,7 @@ module client =
 
     let private agent = MailboxProcessor.Start(processMail)
 
-    let InitializeClient creatorFilters staticFilters =
+    let registerFilters creatorFilters staticFilters =
         state.cmdCreatorFilters <- creatorFilters
         state.cmdStaticFilters <- staticFilters
 

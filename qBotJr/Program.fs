@@ -1,12 +1,12 @@
 ﻿open FSharpx.Control
 open qBotJr
+open FSharp.Control.Tasks.V2
 
 [<EntryPoint>]
 let main (_: string []): int =
 
-    client.InitializeClient commands.creatorFilters commands.staticFilters
-    discord.initializeClient client.Receive
-    Scheduler.init ()
-    discord.startClient ()
-
+    client.registerFilters commands.creatorFilters commands.staticFilters
+    discord.registerEvents ()
+    discord.startClient () |> ignore
+    Scheduler.init () |> Async.RunSynchronously
     0

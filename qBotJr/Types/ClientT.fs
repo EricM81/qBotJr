@@ -37,15 +37,15 @@ type GuildOO =
     Channel : SocketTextChannel
     User : IGuildUser //user of either the socket or rest variant
     }
-    static member create (guild : SocketGuild) channel user  =
-        {GuildID = guild.Id; Guild = guild;Channel = channel; User = user}
+    static member create user (channel : SocketTextChannel) =
+        {GuildID = channel.Guild.Id; Guild = channel.Guild; Channel = channel; User = user}
 
 type NewMessage =
     {
     Goo : GuildOO
     Message : SocketMessage
     }
-    static member create goo msg =
+    static member create msg goo =
         {NewMessage.Goo = goo; Message = msg}
 
 

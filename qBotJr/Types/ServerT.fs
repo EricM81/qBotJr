@@ -14,6 +14,15 @@ type Player =
     static member create (user : IGuildUser) =
         let name = if (String.IsNullOrEmpty user.Nickname) then user.Username else user.Nickname
         { ID = user.Id; Name = name }
+[<Struct>]
+type Role =
+    {
+        ID : uint64
+        Name : string
+    }
+    static member create id name =
+        { Role.ID = id; Name = name }
+
 //ref type
 type PlayerHere =
     {
@@ -77,20 +86,3 @@ type qBotParameters =
     LobbiesCategory : uint64 option
     }
     static member create admins captains cat = { AdminRoles = admins ; CaptainRoles = captains ; LobbiesCategory = cat }
-
-[<Struct>] //val type
-type qHereArgs =
-    {
-    AnnounceID : uint64 option
-    Ping : PingType option
-    }
-    static member create  announcements ping = { qHereArgs.Ping = ping ; AnnounceID = announcements }
-
-[<Struct>] //val type
-type qHereArgsValidated =
-    {
-    Announcements : SocketTextChannel
-    Ping : PingType
-    Emoji : string
-    }
-    static member create announcements ping emoji = { qHereArgsValidated.Ping = ping ; Announcements = announcements; Emoji = emoji}

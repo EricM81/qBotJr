@@ -11,6 +11,24 @@ open helper
 
 module qHere =
 
+
+    [<Struct>] //val type
+    type qHereArgs =
+        {
+        AnnounceID : uint64 option
+        Ping : PingType option
+        }
+        static member create  announcements ping = { qHereArgs.Ping = ping ; AnnounceID = announcements }
+
+    [<Struct>] //val type
+    type qHereValid =
+        {
+        Announcements : SocketTextChannel
+        Ping : PingType
+        Emoji : string
+        }
+        static member create announcements ping emoji = { qHereValid.Ping = ping ; Announcements = announcements; Emoji = emoji}
+
     let lastAnnounceChannel (server : Server) =
         config.GetGuildSettings(server.GuildID).AnnounceChannel
 
@@ -20,15 +38,15 @@ module qHere =
             {cfg with AnnounceChannel = args.AnnounceID} |> config.SetGuildSettings
         args
 
-    let printAnnounceHeader (args : qHereArgsValidated) : string =
+    let printHeader (args : qHereValid) : string =
         let sb = StringBuilder()
         let a format = bprintfn sb format
 
         a "%s" <| discord.pingToString args.Ping
-        a ">>> React here with %s to join the queue!" args.Emoji
-        a ""
+        a ">>> **React with %s to join the queue!**" args.Emoji
+        a "```"
         a "You will get a ping in a new channel, made just for players in your match. You only have a few minutes to join before getting marked as afk, so please watch for the ping!"
-        a ""
+        a "```"
         a "**Please, Un-React to the message if you step away!**"
         a "```You won't lose your place in line."
         a "I'll just skip you until you react agane!```"
@@ -40,7 +58,7 @@ module qHere =
         let sb = StringBuilder()
         let a format = bprintfn sb format
 
-        a ">>> __Post a message to a channel (-a) and ping @ everyone (-e), @ here (-h), or no one (-n).__"
+        a ">>> **Post a message to a channel (-a) and ping @ everyone (-e), @ here (-h), or no one (-n).**"
         a ""
         a "It's best to use a read-only, announcement style channel. Use the channel's permissions to determine who gets to play."
         a "```announcements = everyone, sub_announcements = subs, etc.```"
@@ -110,7 +128,7 @@ module qHere =
     let private removeOldHereMsgFilter msgID (items : ReactionFilter list) =
         items |> List.filter (fun item -> msgID <> item.MessageID)
 
-    let successAsync (server : Server) (_ : GuildOO) (args : qHereArgsValidated) announceHeader (t : Task<RestUserMessage>) : Server option =
+    let successAsync (server : Server) (_ : GuildOO) (args : qHereValid) announceHeader (t : Task<RestUserMessage>) : Server option =
         async {
             let! restMsg = t |> Async.AwaitTask
             let server' = {server with HereMsg = HereMessage.create restMsg args.Emoji announceHeader |> Some }
@@ -134,8 +152,8 @@ module qHere =
         } |> Async.Start
         None
 
-    let successFun (server : Server) (goo : GuildOO) (args : qHereArgsValidated) : Server option =
-        let announceHeader = printAnnounceHeader args
+    let successFun (server : Server) (goo : GuildOO) (args : qHereValid) : Server option =
+        let announceHeader = printHeader args
         let restMsg = discord.sendMsg args.Announcements announceHeader
         match restMsg with
         | Some t ->
@@ -161,9 +179,9 @@ module qHere =
         | Some gChannel -> Success (gChannel, ping)
         | _ -> {args with AnnounceID = None} |> Fail
 
-    let validTextChannel (args : qHereArgs) (gChannel : SocketGuildChannel, ping : PingType) : Validate<qHereArgsValidated, qHereArgs> =
+    let validTextChannel (args : qHereArgs) (gChannel : SocketGuildChannel, ping : PingType) : Validate<qHereValid, qHereArgs> =
         match gChannel with
-        | :? SocketTextChannel as x -> qHereArgsValidated.create x ping emojis.RaiseHands |> Success
+        | :? SocketTextChannel as x -> qHereValid.create x ping emojis.RaiseHands |> Success
         | _ -> {args with AnnounceID = None} |> Fail
 
     let inline validate (server : Server) (goo : GuildOO) (args : qHereArgs) =
