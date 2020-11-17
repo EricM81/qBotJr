@@ -1,13 +1,15 @@
 ﻿namespace qBotJr
 
 open System
+open System.Text
 open System.Threading.Tasks
 open Discord
 open Discord.WebSocket
-open FSharpx.Control
+open FSharp.Control
 open qBotJr
 open qBotJr.T
 open FSharp.Control.Tasks.V2
+open helper
 
 module discord =
 
@@ -66,14 +68,13 @@ module discord =
         let inline private isRtChannelDownCastAble (rt : SocketReaction) =
             if rt.Channel :? SocketTextChannel then true else false
 
+        let inline isUserDownloaded (rt : SocketReaction) : bool =
+            if rt.User.IsSpecified && (rt.User.Value :? IGuildUser) then true else false
+
         let getRtUser (rt : SocketReaction) (chl : SocketTextChannel) =
             task{
-                if rt.User.IsSpecified && (rt.User.Value :? IGuildUser) then
-                    return rt.User.Value :?> IGuildUser
-                else
-                    let! user =
-                        discoClient.Rest.GetGuildUserAsync(chl.Guild.Id, rt.UserId, config.restClientOptions)
-                    return (user :> IGuildUser)
+                let! user = discoClient.Rest.GetGuildUserAsync(chl.Guild.Id, rt.UserId, config.restClientOptions)
+                return (user :> IGuildUser)
             }
 
         let inline private receiveRtAsync msg rt isAdd =
@@ -81,7 +82,11 @@ module discord =
                 if notBotOrNullRt rt
                     && isRtChannelDownCastAble rt then
                     let chl = rt.Channel :?> SocketTextChannel
-                    let! user = getRtUser rt chl
+                    let! user =
+                        if isUserDownloaded rt then
+                            Task.FromResult(rt.User.Value :?> IGuildUser)
+                        else
+                            getRtUser rt chl
                     let mr = GuildOO.create user chl |> MessageReaction.create msg rt isAdd
                     if client.TestRtFilters mr then
                         MessageReaction mr |> client.Receive
@@ -136,6 +141,24 @@ module discord =
         let suffix = '>'
         _helper.stripUID prefix suffix name
 
+    let parseDiscoRole (guild : SocketGuild) (role : string) : Result<SocketRole, string> =
+        let inline tryFind (id) : SocketRole option =
+            guild.Roles |> Seq.tryFind (fun role -> role.Id = id)
+        let prefix = "<@&"
+        let suffix = '>'
+        _helper.stripUID prefix suffix role
+        |> bind tryFind
+        |> function
+            | Some s -> Ok s
+            | None -> Error role
+
+    let validateRoles (guild : SocketGuild) (roles : string list) : Result<SocketRole list, string list>  =
+        let rec validate (roles : string list) (acc : Result<SocketRole list, string list>) =
+            match roles with
+            | [] -> acc
+            | r::rs -> parseDiscoRole guild r |> applyL acc |> validate rs
+        Ok [] |> validate roles
+
     let parseDiscoChannel (name : string) : uint64 option =
         let prefix = "<#"
         let suffix = '>'
@@ -162,6 +185,39 @@ module discord =
 
     let getCategoryByName (guild : SocketGuild) (name : string) : SocketCategoryChannel option =
         guild.CategoryChannels |> Seq.tryFind (fun y -> y.Name = name)
+
+    let validateCategory (guild : SocketGuild) (cat : string option) : Result<SocketCategoryChannel, string list> =
+        match cat with
+        | Some s ->
+            match getCategoryByName guild s with
+                | Some catV -> Ok catV
+                | None -> ["Invalid Category Name: " + s] |> Error
+        | None -> Error ["Category Is Required"]
+
+    let printCategoryNames (guild : SocketGuild) (sb : StringBuilder) =
+        let wrapAtLen = 35
+        let rec print (cats : SocketCategoryChannel list) (lineLen : int) =
+            match cats with
+            | [] -> ()
+            | c::cx when lineLen = 0 ->
+                quoteEscape c.Name |> (+) "   " |> sb.Append |> ignore
+                c.Name.Length + 4 |> print cx
+            | c::cx when c.Name.Length + lineLen <= wrapAtLen ->
+                quoteEscape c.Name |> (+) ", " |> sb.Append |> ignore
+                c.Name.Length + 2 |> print cx
+            | c::cx ->
+                quoteEscape c.Name |> (+) "\n   " |> sb.Append |> ignore
+                c.Name.Length + 4 |> print cx
+
+        print (guild.CategoryChannels |> Seq.toList) 0
+
+
+    let getCategoryById (id : uint64) : SocketCategoryChannel option =
+        let channel = discoClient.GetChannel id
+        match channel with
+        | :? SocketCategoryChannel as z -> Some z
+        | _ -> None
+
 
     let getChannelByID (id : uint64) : SocketGuildChannel option =
         let channel = discoClient.GetChannel id

@@ -5,15 +5,15 @@ open System.Threading.Tasks
 open Discord
 open Discord.Rest
 open Discord.WebSocket
-open FSharpx.Control
 open qBotJr.T
 open helper
+open qBotJr.qBot
 
 module qHere =
 
 
     [<Struct>] //val type
-    type qHereArgs =
+    type private qHereArgs =
         {
         AnnounceID : uint64 option
         Ping : PingType option
@@ -21,7 +21,7 @@ module qHere =
         static member create  announcements ping = { qHereArgs.Ping = ping ; AnnounceID = announcements }
 
     [<Struct>] //val type
-    type qHereValid =
+    type private qHereValid =
         {
         Announcements : SocketTextChannel
         Ping : PingType
@@ -174,10 +174,14 @@ module qHere =
          | Some channel, Some ping -> Success (channel, ping)
          | _ -> Fail args
 
-    let validChannel (args : qHereArgs) (channelID : uint64, ping : PingType) : Validate<(SocketGuildChannel * PingType), qHereArgs> =
-        match discord.getChannelByID channelID with
-        | Some gChannel -> Success (gChannel, ping)
-        | _ -> {args with AnnounceID = None} |> Fail
+    let validChannel (args : qHereArgs) : Result<SocketGuildChannel, qHereArgs * string list> =
+        match args.AnnounceID with
+        | Some id ->
+            match discord.getChannelByID id with
+            | Some gChannel -> Ok gChannel
+            | _ -> tuple {args with AnnounceID = None} ["Announcement Channel Is Invalid"] |> Error
+        | None -> tuple args ["Announcement Channel Is Required"] |> Error
+
 
     let validTextChannel (args : qHereArgs) (gChannel : SocketGuildChannel, ping : PingType) : Validate<qHereValid, qHereArgs> =
         match gChannel with
@@ -185,6 +189,9 @@ module qHere =
         | _ -> {args with AnnounceID = None} |> Fail
 
     let inline validate (server : Server) (goo : GuildOO) (args : qHereArgs) =
+        //SocketTextChannel -> PingType -> string -> qHereValid
+
+        let validAnnChl = args.AnnounceID |> bind validChannel
         validOptions args
         |> bindValid validChannel args
         |> bindValid validTextChannel args

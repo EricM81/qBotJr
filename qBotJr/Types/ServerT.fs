@@ -14,14 +14,6 @@ type Player =
     static member create (user : IGuildUser) =
         let name = if (String.IsNullOrEmpty user.Nickname) then user.Username else user.Nickname
         { ID = user.Id; Name = name }
-[<Struct>]
-type Role =
-    {
-        ID : uint64
-        Name : string
-    }
-    static member create id name =
-        { Role.ID = id; Name = name }
 
 //ref type
 type PlayerHere =

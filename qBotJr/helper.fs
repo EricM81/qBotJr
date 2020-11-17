@@ -29,6 +29,28 @@ module helper =
     let inline tuple x y =
         x, y
 
+    let inline map f xResult =
+        match xResult with
+        | Ok x -> Ok (f x)
+        | Error ex -> Error ex
+
+    let inline apply xResult yResult =
+        match xResult, yResult with
+        | Ok x, Ok y -> Ok (x, y)
+        | Error ex, Ok _ -> Error ex
+        | Ok _, Error ey -> Error ey
+        | Error ex, Error ey -> Error (List.concat [ex; ey])
+
+    let inline applyL xList yItem =
+        match xList, yItem with
+        | Ok x, Ok y -> Ok (y :: x)
+        | Error ex, Ok _ -> Error ex
+        | Ok _, Error ey -> Error [ey]
+        | Error ex, Error ey -> Error (ey::ex)
+
+    let (<!>) = map
+    let (<*>) = apply
+
     [<StructuralEquality ; StructuralComparison>]
     [<Struct>]
     type ContinueOption<'T, 'U> =
@@ -91,6 +113,9 @@ module helper =
         |> bindPerms isGuildCaptain gUser
 
     let bprintfn (sb : StringBuilder) = Printf.kprintf (fun s -> sb.AppendLine s |> ignore)
+
+    let inline quoteEscape (str : string) : string =
+        if str.Contains(' ') then "\"" + str + "\"" else str
 
     let printPlayer (widthT : int) (ph : PlayerHere) =
         let post =
