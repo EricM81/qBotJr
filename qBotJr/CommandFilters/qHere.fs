@@ -1,4 +1,5 @@
 ﻿namespace qBotJr
+
 open System
 open System.Text
 open System.Threading.Tasks
@@ -7,45 +8,50 @@ open Discord.Rest
 open Discord.WebSocket
 open qBotJr.T
 open helper
-open qBotJr.qBot
 
 module qHere =
-
 
     [<Struct>] //val type
     type private qHereArgs =
         {
-        AnnounceID : uint64 option
-        Ping : PingType option
+            Server : Server
+            Goo : GuildOO
+            AnnounceID : uint64 option
+            Ping : PingType option
+            Errors : string list
         }
-        static member create  announcements ping = { qHereArgs.Ping = ping ; AnnounceID = announcements }
+        static member create s g announcements ping =
+            { qHereArgs.Server = s ; Goo = g ; Ping = ping ; AnnounceID = announcements ; Errors = [] }
 
     [<Struct>] //val type
     type private qHereValid =
         {
-        Announcements : SocketTextChannel
-        Ping : PingType
-        Emoji : string
+            Server : Server
+            Goo : GuildOO
+            Announcements : SocketTextChannel
+            Ping : PingType
+            Emoji : string
         }
-        static member create announcements ping emoji = { qHereValid.Ping = ping ; Announcements = announcements; Emoji = emoji}
+        static member create s g announcements ping =
+            { qHereValid.Server = s ; Goo = g ; Ping = ping ; Announcements = announcements ; Emoji = emojis.RaiseHands }
 
-    let lastAnnounceChannel (server : Server) =
-        config.GetGuildSettings(server.GuildID).AnnounceChannel
+    let lastAnnounceChannel (server : Server) = config.GetGuildSettings(server.GuildID).AnnounceChannel
 
-    let updateAnnounceChannel (server : Server) (args : qHereArgs) =
+    let private updateAnnounceChannel (server : Server) (args : qHereArgs) =
         let cfg = config.GetGuildSettings server.GuildID
         if cfg.AnnounceChannel <> args.AnnounceID then
-            {cfg with AnnounceChannel = args.AnnounceID} |> config.SetGuildSettings
+            { cfg with AnnounceChannel = args.AnnounceID } |> config.SetGuildSettings
         args
 
-    let printHeader (args : qHereValid) : string =
+    let private printHeader (args : qHereValid) : string =
         let sb = StringBuilder()
         let a format = bprintfn sb format
 
         a "%s" <| discord.pingToString args.Ping
         a ">>> **React with %s to join the queue!**" args.Emoji
         a "```"
-        a "You will get a ping in a new channel, made just for players in your match. You only have a few minutes to join before getting marked as afk, so please watch for the ping!"
+        a
+            "You will get a ping in a new channel, made just for players in your match. You only have a few minutes to join before getting marked as afk, so please watch for the ping!"
         a "```"
         a "**Please, Un-React to the message if you step away!**"
         a "```You won't lose your place in line."
@@ -53,14 +59,15 @@ module qHere =
 
         sb.ToString()
 
-    let printMan (args : qHereArgs) : string =
+    let private printMan (args : qHereArgs) : string =
 
         let sb = StringBuilder()
         let a format = bprintfn sb format
 
         a ">>> **Post a message to a channel (-a) and ping @ everyone (-e), @ here (-h), or no one (-n).**"
         a ""
-        a "It's best to use a read-only, announcement style channel. Use the channel's permissions to determine who gets to play."
+        a
+            "It's best to use a read-only, announcement style channel. Use the channel's permissions to determine who gets to play."
         a "```announcements = everyone, sub_announcements = subs, etc.```"
         a "Over time, people will leave.  You can re-run qHere for a fresh count."
         a "```This will not reset the \"games played\" stat."
@@ -69,10 +76,8 @@ module qHere =
         a "```qHere -e|-h|-n -a #your_channel"
         a ""
         match args.Ping with
-        | Some p ->
-            a "Pick one: (currently: %A)" p
-        | None ->
-            a "Pick one: (this is a required field)"
+        | Some p -> a "Pick one: (currently: %A)" p
+        | None -> a "Pick one: (this is a required field)"
         a "-e Ping @ everyone"
         a "-h Ping @ here"
         a "-n Ping no one, just post"
@@ -92,7 +97,7 @@ module qHere =
 
         sb.ToString()
 
-    let rec initArgs (xs : CommandLineArgs list) (acc : qHereArgs) : qHereArgs =
+    let rec private initArgs (xs : CommandLineArgs list) (acc : qHereArgs) : qHereArgs =
         //example input
         //qhere
         //qhere -a <#544636678954811392>
@@ -100,13 +105,13 @@ module qHere =
         //-a <#544636678954811392> -e -h
         match xs with
         | [] -> acc
-        | x::xs when x.Switch = Some 'E' -> initArgs xs {acc with Ping = Some PingType.Everyone}
-        | x::xs when x.Switch = Some 'H' -> initArgs xs {acc with Ping = Some PingType.Here}
-        | x::xs when x.Switch = Some 'N' -> initArgs xs {acc with Ping = Some PingType.NoOne}
-        | x::xs when x.Values <> [] ->
+        | x :: xs when x.Switch = Some 'E' -> initArgs xs { acc with Ping = Some PingType.Everyone }
+        | x :: xs when x.Switch = Some 'H' -> initArgs xs { acc with Ping = Some PingType.Here }
+        | x :: xs when x.Switch = Some 'N' -> initArgs xs { acc with Ping = Some PingType.NoOne }
+        | x :: xs when x.Values <> [] ->
             discord.parseDiscoChannel x.Values.Head
             |> function
-            | Some id -> {acc with AnnounceID = Some id}
+            | Some id -> { acc with AnnounceID = Some id }
             | _ -> acc
             |> initArgs xs
         //ignore invalid input?
@@ -123,18 +128,20 @@ module qHere =
             None
         | None ->
             let p = PlayerHere.create user mr.IsAdd
-            Some {server with PlayersHere = p::server.PlayersHere; PlayerListIsDirty = true}
+            Some { server with PlayersHere = p :: server.PlayersHere ; PlayerListIsDirty = true }
 
     let private removeOldHereMsgFilter msgID (items : ReactionFilter list) =
         items |> List.filter (fun item -> msgID <> item.MessageID)
 
-    let successAsync (server : Server) (_ : GuildOO) (args : qHereValid) announceHeader (t : Task<RestUserMessage>) : Server option =
+    let private successAsync (argsV : qHereValid) announceHeader (t : Task<RestUserMessage>) : Server option =
         async {
+            let server = argsV.Server
             let! restMsg = t |> Async.AwaitTask
-            let server' = {server with HereMsg = HereMessage.create restMsg args.Emoji announceHeader |> Some }
+            let server' = { server with HereMsg = HereMessage.create restMsg argsV.Emoji announceHeader |> Some }
+
             AsyncTask(fun state ->
                 //seed the reaction to say "I'm here"
-                Emoji(args.Emoji) |> restMsg.AddReactionAsync |> ignore
+                Emoji(argsV.Emoji) |> restMsg.AddReactionAsync |> ignore
                 //if replacing a hereMsg, remove old reaction filter and reset everyone's isHere
                 match server.HereMsg with
                 | Some msg ->
@@ -144,65 +151,64 @@ module qHere =
                 //create new hereMsg
                 state.Servers <- state.Servers |> Map.add server.GuildID server'
                 //register filter for one reactions
-                [ ReAction.create args.Emoji updateHereList ]
+                [ ReAction.create argsV.Emoji updateHereList ]
                 |> ReactionFilter.create server.GuildID restMsg.Id DateTimeOffset.MaxValue None
-                |> client.AddServerReactionFiler
-                )
-            |> UpdateState |> client.Receive
-        } |> Async.Start
+                |> client.AddServerReactionFiler)
+            |> UpdateState
+            |> client.Receive
+        }
+        |> Async.Start
         None
 
-    let successFun (server : Server) (goo : GuildOO) (args : qHereValid) : Server option =
-        let announceHeader = printHeader args
-        let restMsg = discord.sendMsg args.Announcements announceHeader
+    let private successFun (argsV : qHereValid) : Server option =
+        let announceHeader = printHeader argsV
+        let restMsg = discord.sendMsg argsV.Announcements announceHeader
         match restMsg with
-        | Some t ->
-            successAsync server goo args announceHeader t
-        | None -> //should never happen
-            sprintf "Failed to send rest message to SocketTextChannel: %i in Guild %i" args.Announcements.Id goo.GuildID
+        | Some t -> successAsync argsV announceHeader t
+        | None ->
+            sprintf
+                "Failed to send rest message to SocketTextChannel: %i in Guild %i"
+                argsV.Announcements.Id
+                argsV.Goo.GuildID
             |> logger.WriteLine
             None
 
-    let errorFun (goo : GuildOO) (args : qHereArgs)  =
-        printMan args
-        |> discord.sendMsg goo.Channel
-        |> ignore
+    let private errorFun (args : qHereArgs) =
+        printMan args |> discord.sendMsg args.Goo.Channel |> ignore
         None
 
-    let validOptions (args : qHereArgs) : Validate<(uint64 * PingType), qHereArgs> =
-         match args.AnnounceID, args.Ping with
-         | Some channel, Some ping -> Success (channel, ping)
-         | _ -> Fail args
-
-    let validChannel (args : qHereArgs) : Result<SocketGuildChannel, qHereArgs * string list> =
+    let private validateChannel (args : qHereArgs) =
         match args.AnnounceID with
         | Some id ->
             match discord.getChannelByID id with
-            | Some gChannel -> Ok gChannel
-            | _ -> tuple {args with AnnounceID = None} ["Announcement Channel Is Invalid"] |> Error
-        | None -> tuple args ["Announcement Channel Is Required"] |> Error
+            | Some gChl ->
+                if (gChl :? SocketTextChannel) then
+                    gChl :?> SocketTextChannel |> Ok
+                else
+                    Error { args with AnnounceID = None ; Errors = "Channel Is Not A Text Channel" :: args.Errors }
+            | _ -> Error { args with AnnounceID = None ; Errors = "Channel Not Found" :: args.Errors }
+        | None -> Error { args with Errors = "Channel Is Required" :: args.Errors }
 
+    let private validatePing (args:qHereArgs) =
+        match args.Ping with
+        | Some p -> Ok p
+        | None -> Error {args with Errors = "Type of Ping is Required"::args.Errors}
 
-    let validTextChannel (args : qHereArgs) (gChannel : SocketGuildChannel, ping : PingType) : Validate<qHereValid, qHereArgs> =
-        match gChannel with
-        | :? SocketTextChannel as x -> qHereValid.create x ping emojis.RaiseHands |> Success
-        | _ -> {args with AnnounceID = None} |> Fail
-
-    let inline validate (server : Server) (goo : GuildOO) (args : qHereArgs) =
-        //SocketTextChannel -> PingType -> string -> qHereValid
-
-        let validAnnChl = args.AnnounceID |> bind validChannel
-        validOptions args
-        |> bindValid validChannel args
-        |> bindValid validTextChannel args
+    let inline private validate (args : qHereArgs) =
+        Ok(args, (qHereValid.create args.Server args.Goo))
+        |> bindR validateChannel
+        |> bindR validatePing
         |> function
-        | Success argsValid -> successFun server goo argsValid
-        | Fail args -> errorFun goo args
+            | Ok (_, argsV) -> Ok argsV
+            | Error ex -> Error ex
 
     let Run (server : Server) (goo : GuildOO) (pm : ParsedMsg) : Server option =
-        qHereArgs.create (lastAnnounceChannel server) None
+        qHereArgs.create server goo (lastAnnounceChannel server) None
         |> initArgs pm.ParsedArgs
         |> updateAnnounceChannel server
-        |> validate server goo
+        |> validate
+        |> function
+        | Ok argsV -> successFun argsV
+        | Error args -> errorFun args
 
     let Command = Command.create "QHERE" UserPermission.Admin Run discord.reactDistrust

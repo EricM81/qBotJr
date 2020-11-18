@@ -27,12 +27,12 @@ module helper =
         | Ok (args, successFun) ->
             match f args with
             | Ok p -> Ok (args, (successFun p))
-            | Error (args, ex) -> Error (args, ex)
-        | Error (args, ex) ->
+            | Error args' -> Error args'
+        | Error args ->
             match f args with
-            | Ok _ -> Error (args, ex)
-            | Error (args, ex') ->
-                Error (args, (List.concat [ex'; ex]))
+            | Ok _ -> Error args
+            | Error args' ->
+                Error args'
 
     let bindB f x =
         match x with

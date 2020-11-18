@@ -13,24 +13,29 @@ module qBot =
     [<Struct>] //val type
     type private qBotArgs =
         {
+            Server : Server
+            Goo : GuildOO
             AdminRoles : string list
             CaptainRoles : string list
             LobbyCategory : string option
+            Errors : string list
         }
-        static member create admins captains cat =
-            { qBotArgs.AdminRoles = admins; CaptainRoles = captains; LobbyCategory = cat }
-        static member createDefault =
-            { qBotArgs.AdminRoles = []; CaptainRoles = []; LobbyCategory = None }
+        static member create s g admins captains cat =
+            { qBotArgs.Server = s; Goo = g;AdminRoles = admins; CaptainRoles = captains; LobbyCategory = cat; Errors = []}
+        static member createDefault s g =
+            { qBotArgs.Server = s; Goo = g;AdminRoles = []; CaptainRoles = []; LobbyCategory = None; Errors =[] }
 
     [<Struct>] //val type
     type private qBotValid =
         {
+            Server : Server
+            Goo : GuildOO
             AdminRoles : SocketRole list
             CaptainRoles : SocketRole list
             LobbyCategory : SocketCategoryChannel
         }
-        static member create admins captains cat =
-            { qBotValid.AdminRoles = admins; CaptainRoles = captains; LobbyCategory = cat }
+        static member create s goo admins captains cat =
+            { qBotValid.Server = s; Goo = goo;AdminRoles = admins; CaptainRoles = captains; LobbyCategory = cat }
 
     let inline printRolesSB (sb : StringBuilder) (roles : string list) =
         let rec print (firstRun : bool) (roles : string list) =
@@ -89,10 +94,10 @@ module qBot =
 
         sb.ToString()
 
-    let private successFun (server: Server) (goo : GuildOO) (argsV : qBotValid) =
-        Some server
+    let private successFun (argsV : qBotValid) =
+        Some argsV.Server
 
-    let private errorFun (server: Server) (goo : GuildOO) (args : qBotArgs) (errs : string list) =
+    let private errorFun (args : qBotArgs) =
         None
 
     let private initArgs (cmdArgs : CommandLineArgs list) (configArgs:qBotArgs) : qBotArgs =
@@ -108,29 +113,32 @@ module qBot =
             | _::xs -> init xs acc
         init cmdArgs configArgs
 
-    let private validateAdmins (g :SocketGuild, args:qBotArgs) =
-        match validateRoles g args.AdminRoles with
+    let private validateAdmins (args:qBotArgs) =
+        match validateRoles args.Goo.Guild args.AdminRoles with
         | Ok srList -> Ok srList
-        | Error (strList, errList) -> Error ((g, {args with AdminRoles = strList}), errList)
+        | Error (strList, errList) -> Error ({args with AdminRoles = strList; Errors = List.concat [errList; args.Errors]})
 
-    let private validateCaptains (g :SocketGuild, args:qBotArgs) =
-        match validateRoles g args.CaptainRoles with
+    let private validateCaptains (args:qBotArgs) =
+        match validateRoles args.Goo.Guild  args.CaptainRoles with
         | Ok srList -> Ok srList
-        | Error (strList, errList) -> Error ((g, {args with CaptainRoles = strList}), errList)
+        | Error (strList, errList) -> Error ({args with CaptainRoles = strList; Errors = List.concat [errList; args.Errors]})
 
-    let private validateCategory (g :SocketGuild, args:qBotArgs) =
+    let private validateCategory (args:qBotArgs) =
         match args.LobbyCategory with
         | Some s ->
-            match getCategoryByName g s with
+            match getCategoryByName args.Goo.Guild s with
                 | Some catV -> Ok catV
-                | None -> Error ((g, {args with LobbyCategory = None}), ["Invalid Category Name: " + s])
-        | None -> Error ((g, {args with LobbyCategory = None}), ["Category Is Required"])
+                | None -> Error ({args with LobbyCategory = None; Errors = ("Invalid Category Name: " + s)::args.Errors})
+        | None -> Error ({args with LobbyCategory = None; Errors = "Category Is Required"::args.Errors})
 
-    let private validate (g : SocketGuild) (args : qBotArgs) =
-        Ok ((g, args), qBotValid.create)
+    let private validate (args : qBotArgs) =
+        Ok (args, (qBotValid.create args.Server args.Goo))
         |> bindR validateAdmins
         |> bindR validateCaptains
         |> bindR validateCategory
+        |> function
+            | Ok (_,argsV) -> Ok (argsV)
+            | Error ex -> Error ex
 
     let Run (server : Server) (goo : GuildOO) (pm : ParsedMsg) : Server option =
         let settings = config.GetGuildSettings goo.Channel.Guild.Id
@@ -145,9 +153,9 @@ module qBot =
             |> bind getCategoryById
             |> bind (fun cat -> Some cat.Name)
 
-        qBotArgs.create adminRoles captainRoles lobbiesCat
+        qBotArgs.create server goo adminRoles captainRoles lobbiesCat
         |> initArgs pm.ParsedArgs
-        |> validate goo.Guild
+        |> validate
         |> function
-        | Ok (_, argsV) -> successFun server goo argsV
-        | Error ((_, args), errs) -> errorFun server goo args errs
+        | Ok argsV -> successFun argsV
+        | Error args -> errorFun args
