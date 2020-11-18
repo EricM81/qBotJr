@@ -21,6 +21,19 @@ module helper =
         | ValueSome x -> f x
         | ValueNone -> ValueNone
 
+    //https://forums.fsharp.org/t/thoughts-on-input-validation-pattern-from-a-noob/1541
+    let inline bindR f acc =
+        match acc with
+        | Ok (args, successFun) ->
+            match f args with
+            | Ok p -> Ok (args, (successFun p))
+            | Error (args, ex) -> Error (args, ex)
+        | Error (args, ex) ->
+            match f args with
+            | Ok _ -> Error (args, ex)
+            | Error (args, ex') ->
+                Error (args, (List.concat [ex'; ex]))
+
     let bindB f x =
         match x with
         | true -> f

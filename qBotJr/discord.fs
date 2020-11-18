@@ -152,11 +152,19 @@ module discord =
             | Some s -> Ok s
             | None -> Error role
 
-    let validateRoles (guild : SocketGuild) (roles : string list) : Result<SocketRole list, string list>  =
-        let rec validate (roles : string list) (acc : Result<SocketRole list, string list>) =
+    let validateRoles (guild : SocketGuild) (roles : string list) : Result<SocketRole list, string list * string list>  =
+        let rec validate (roles : string list) (acc : Result<SocketRole list, string list * string list>) =
             match roles with
             | [] -> acc
-            | r::rs -> parseDiscoRole guild r |> applyL acc |> validate rs
+            | strRole::strList ->
+                match acc, (parseDiscoRole guild strRole) with
+                | Ok(srList), Ok (sr) -> Ok(sr::srList) |> validate strList
+                | Ok(srList), Error(err) ->
+                    let goodRoles = srList |> List.map(fun sr -> sr.Name)
+                    Error(goodRoles, [err]) |> validate strList
+                | Error(strList, errList), Ok _ -> Error ((strRole::strList), errList) |> validate strList
+                | Error(strList, errList), Error(err) ->
+                    Error(strList, (err::errList)) |> validate strList
         Ok [] |> validate roles
 
     let parseDiscoChannel (name : string) : uint64 option =
@@ -186,13 +194,7 @@ module discord =
     let getCategoryByName (guild : SocketGuild) (name : string) : SocketCategoryChannel option =
         guild.CategoryChannels |> Seq.tryFind (fun y -> y.Name = name)
 
-    let validateCategory (guild : SocketGuild) (cat : string option) : Result<SocketCategoryChannel, string list> =
-        match cat with
-        | Some s ->
-            match getCategoryByName guild s with
-                | Some catV -> Ok catV
-                | None -> ["Invalid Category Name: " + s] |> Error
-        | None -> Error ["Category Is Required"]
+
 
     let printCategoryNames (guild : SocketGuild) (sb : StringBuilder) =
         let wrapAtLen = 35

@@ -1,5 +1,4 @@
 ﻿namespace qBotJr
-open System.Threading.Channels
 open Discord.WebSocket
 open System.Text
 open discord
@@ -33,22 +32,16 @@ module qBot =
         static member create admins captains cat =
             { qBotValid.AdminRoles = admins; CaptainRoles = captains; LobbyCategory = cat }
 
-    let inline printRolesSB (sb : StringBuilder) (roles : SocketRole list) =
-        let rec print (firstRun : bool) (roles : SocketRole list) =
+    let inline printRolesSB (sb : StringBuilder) (roles : string list) =
+        let rec print (firstRun : bool) (roles : string list) =
             match firstRun, roles with
-            | false, [] -> sb.AppendLine "" |> ignore
-            | true, [] -> sb.AppendLine "No Current Value." |> ignore
-            | false, r::rs -> ", @" + r.Name |> sb.Append |> ignore; print false rs
-            | true, r::rs -> "    Current Value: @" + r.Name |> ignore; print false rs
+            | false, [] -> "" |> sb.AppendLine |> ignore
+            | true, [] -> "No Current Value." |> sb.AppendLine |> ignore
+            | true, r::rs -> "    Current Value: " + (quoteEscape r) |> sb.Append |> ignore; print false rs
+            | false, r::rs -> ", " + (quoteEscape r) |> sb.Append |> ignore; print false rs
         print true roles
 
-    let printRoles (roles : SocketRole list) : string =
-        let sb = StringBuilder()
-        printRolesSB sb roles
-        sb.ToString()
-
-
-    let printMan (goo : GuildOO) (args : qBotArgs) : string =
+    let private printMan (goo : GuildOO) (args : qBotArgs) : string =
         let sb = StringBuilder()
         let a format = bprintfn sb format
 
@@ -79,24 +72,30 @@ module qBot =
         a "You can use the full command, but I'm also listening for a single option, i.e. \"-a @admin @mod\"."
         sb.ToString()
 
-    let printValid (argsV : qBotValid) : string =
+    let private printValid (argsV : qBotValid) : string =
         let sb = StringBuilder()
         let a format = bprintfn sb format
 
         a "Current Setting:"
         sb.Append "qBot -a " |> ignore
-        printRolesSB sb argsV.AdminRoles
-        sb.Append "-c " |> ignore
-        printRolesSB sb argsV.AdminRoles |> ignore
+        argsV.AdminRoles
+        |> List.map (fun role -> role.Name)
+        |> printRolesSB sb
+        sb.Append " -c " |> ignore
+        argsV.CaptainRoles
+        |> List.map (fun role -> role.Name)
+        |> printRolesSB sb
         a " -l %s" <|  quoteEscape argsV.LobbyCategory.Name
 
         sb.ToString()
-    let successFun (server: Server) (goo : GuildOO) (argsV : qBotValid) =
-        ()
 
-    let errorFun (server: Server) (goo : GuildOO) (argsO : qBotArgs) (argsV : qBotArgs) =
-        ()
-    let initArgs (args : CommandLineArgs list) : qBotArgs =
+    let private successFun (server: Server) (goo : GuildOO) (argsV : qBotValid) =
+        Some server
+
+    let private errorFun (server: Server) (goo : GuildOO) (args : qBotArgs) (errs : string list) =
+        None
+
+    let private initArgs (cmdArgs : CommandLineArgs list) (configArgs:qBotArgs) : qBotArgs =
         let rec init (xs : CommandLineArgs list) (acc : qBotArgs) =
             match xs with
             | [] -> acc
@@ -106,28 +105,49 @@ module qBot =
                 init xs {acc with qBotArgs.CaptainRoles = x.Values }
             | x::xs when x.Switch = Some 'L' && x.Values <> [] ->
                 init xs {acc with qBotArgs.LobbyCategory = Some x.Values.Head}
-            | x::xs -> init xs acc
-        qBotArgs.createDefault |> init args
+            | _::xs -> init xs acc
+        init cmdArgs configArgs
 
-    let validate (server: Server) (goo : GuildOO) (args : qBotArgs) =
-        let g = goo.Guild
-        let validAdmins = validateRoles g args.AdminRoles
-        let validCaps = validateRoles g args.CaptainRoles
-        let validChl = validateCategory g args.LobbyCategory
+    let private validateAdmins (g :SocketGuild, args:qBotArgs) =
+        match validateRoles g args.AdminRoles with
+        | Ok srList -> Ok srList
+        | Error (strList, errList) -> Error ((g, {args with AdminRoles = strList}), errList)
 
-        qBotValid.create <!> validAdmins <*> validCaps <*> validChl
+    let private validateCaptains (g :SocketGuild, args:qBotArgs) =
+        match validateRoles g args.CaptainRoles with
+        | Ok srList -> Ok srList
+        | Error (strList, errList) -> Error ((g, {args with CaptainRoles = strList}), errList)
 
+    let private validateCategory (g :SocketGuild, args:qBotArgs) =
+        match args.LobbyCategory with
+        | Some s ->
+            match getCategoryByName g s with
+                | Some catV -> Ok catV
+                | None -> Error ((g, {args with LobbyCategory = None}), ["Invalid Category Name: " + s])
+        | None -> Error ((g, {args with LobbyCategory = None}), ["Category Is Required"])
 
-    let str = "QBOT"
-    let Run (pm : ParsedMsg) (goo : GuildOO) : unit =
+    let private validate (g : SocketGuild) (args : qBotArgs) =
+        Ok ((g, args), qBotValid.create)
+        |> bindR validateAdmins
+        |> bindR validateCaptains
+        |> bindR validateCategory
+
+    let Run (server : Server) (goo : GuildOO) (pm : ParsedMsg) : Server option =
         let settings = config.GetGuildSettings goo.Channel.Guild.Id
-        let adminRoles = getRolesByIDs goo.Channel.Guild settings.AdminRoles
-        let captainRoles = getRolesByIDs goo.Channel.Guild settings.CaptainRoles
+        let adminRoles =
+            getRolesByIDs goo.Channel.Guild settings.AdminRoles
+            |> List.map (fun sr -> sr.Name)
+        let captainRoles =
+            getRolesByIDs goo.Channel.Guild settings.CaptainRoles
+            |> List.map (fun sr -> sr.Name)
+        let lobbiesCat =
+            settings.LobbiesCategory
+            |> bind getCategoryById
+            |> bind (fun cat -> Some cat.Name)
 
-
-
-        ()
-
-    let noPerms  (pm : ParsedMsg) (goo : GuildOO) : unit =
-        ()
-
+        qBotArgs.create adminRoles captainRoles lobbiesCat
+        |> initArgs pm.ParsedArgs
+        |> validate goo.Guild
+        |> function
+        | Ok (_, argsV) -> successFun server goo argsV
+        | Error ((_, args), errs) -> errorFun server goo args errs
