@@ -69,5 +69,10 @@ module parser =
             parseArgs input pos' len ((CommandLineArgs.create None values) :: acc)
 
     let rec parseInput (cmd : string) (input : string) : CommandLineArgs list =
-        let (_, args) = parseArgs input cmd.Length input.Length []
+        //static filters listen for a word, i.e. "qBot ..." or "qHere ..."
+        //dynamic filters listen for a switch, i.e. "-a ..."
+        //we need to keep the switch, but can toss the static word
+        let startPOS = if cmd.Length > 1 && cmd.[0] = '-' then 0 else cmd.Length
+        //start parsing
+        let (_, args) = parseArgs input startPOS input.Length []
         args
