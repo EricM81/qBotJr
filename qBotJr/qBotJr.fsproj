@@ -30,12 +30,13 @@
     <Compile Include="CommandFilters\qMode.fs" />
     <Compile Include="CommandFilters\qSet.fs" />
     <Compile Include="CommandFilters\qBan.fs" />
+    <Compile Include="CommandFilters\qCustoms.fs" />
     <Compile Include="CommandFilters\qAFK.fs" />
     <Compile Include="CommandFilters\qKick.fs" />
     <Compile Include="CommandFilters\qAdd.fs" />
     <Compile Include="CommandFilters\qClose.fs" />
-    <Compile Include="CommandFilters\qCustoms.fs" />
     <Compile Include="CommandFilters\qNext.fs" />
+    <Compile Include="CommandFilters\aHelp.fs" />
     <Compile Include="CommandFilters\commands.fs" />
     <Compile Include="Scheduler.fs" />
     <Compile Include="Service.fs" />

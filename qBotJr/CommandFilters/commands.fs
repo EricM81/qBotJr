@@ -15,6 +15,8 @@ module commands =
     let staticFilters =
         [|
             qHere.Command
+            qBot.Command
+            qHelp.Command
         |]
     let creatorFilters =
         [|

@@ -5,6 +5,7 @@ open System.Text
 open System.Threading.Tasks
 open Discord
 open Discord.WebSocket
+open Discord.WebSocket
 open FSharp.Control
 open qBotJr
 open qBotJr.T
@@ -152,6 +153,12 @@ module discord =
             | Some s -> Ok s
             | None -> Error role
 
+    let socketRoleToStrId (sr : SocketRole) : string =
+        sprintf "<@&%i>" sr.Id
+
+    let socketRoleToStrName (sr : SocketRole) : string =
+        sr.Name |> quoteEscape
+
     let validateRoles (guild : SocketGuild) (roles : string list) : Result<SocketRole list, string list * string list>  =
         let rec validate (roles : string list) (acc : Result<SocketRole list, string list * string list>) =
             match roles with
@@ -197,7 +204,7 @@ module discord =
 
 
     let printCategoryNames (guild : SocketGuild) (sb : StringBuilder) =
-        let wrapAtLen = 35
+        let wrapAtLen = 50
         let rec print (cats : SocketCategoryChannel list) (lineLen : int) =
             match cats with
             | [] -> ()

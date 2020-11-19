@@ -34,6 +34,8 @@ module helper =
             | Error args' ->
                 Error args'
 
+    let (|>>) y x = bindR x y
+
     let bindB f x =
         match x with
         | true -> f
@@ -163,6 +165,13 @@ module helper =
             sb.Append "```" |> ignore
             sb.ToString()
         else ""
+
+    let printErrors (sb: StringBuilder) (errs : string list) =
+        let rec print (errs : string list) =
+            match errs with
+            | [] -> sb.AppendLine "" |> ignore
+            | e::ex -> "**" + e + "**" |> sb.AppendLine |> ignore; print ex
+        print errs
 
     let getServer (servers: Map<uint64, Server>) (guild : SocketGuild) =
         servers

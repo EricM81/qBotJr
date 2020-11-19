@@ -64,10 +64,11 @@ module qHere =
         let sb = StringBuilder()
         let a format = bprintfn sb format
 
+
         a ">>> **Post a message to a channel (-a) and ping @ everyone (-e), @ here (-h), or no one (-n).**"
         a ""
-        a
-            "It's best to use a read-only, announcement style channel. Use the channel's permissions to determine who gets to play."
+        printErrors sb args.Errors
+        a "It's best to use a read-only, announcement style channel. Use the channel's permissions to determine who gets to play."
         a "```announcements = everyone, sub_announcements = subs, etc.```"
         a "Over time, people will leave.  You can re-run qHere for a fresh count."
         a "```This will not reset the \"games played\" stat."
@@ -75,12 +76,12 @@ module qHere =
 
         a "```qHere -e|-h|-n -a #your_channel"
         a ""
-        match args.Ping with
-        | Some p -> a "Pick one: (currently: %A)" p
-        | None -> a "Pick one: (this is a required field)"
+        a "Pick one:"
         a "-e Ping @ everyone"
         a "-h Ping @ here"
         a "-n Ping no one, just post"
+        a "   Current Value: #%s" <|
+            match args.Ping with | Some p -> p.ToString(); | None -> "Nothing Selected"
         a ""
         a "-a Announcement channel."
         match bind discord.getChannelByID args.AnnounceID with
@@ -196,8 +197,7 @@ module qHere =
 
     let inline private validate (args : qHereArgs) =
         Ok(args, (qHereValid.create args.Server args.Goo))
-        |> bindR validateChannel
-        |> bindR validatePing
+        |>> validateChannel |>> validatePing
         |> function
             | Ok (_, argsV) -> Ok argsV
             | Error ex -> Error ex
