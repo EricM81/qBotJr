@@ -65,7 +65,7 @@ module qHere =
       Command.create "-N" _perm callBack reactDistrust
       Command.create "-A" _perm callBack reactDistrust
     ]
-    |> MessageFilter.create args.Goo.Channel.Id (DateTimeOffset.Now.AddMinutes (5.0)) (Some args.Goo.User.Id)
+    |> MessageFilter.create args.Goo.GuildID (DateTimeOffset.Now.AddMinutes (5.0)) (Some args.Goo.User.Id)
 
   let private printHeader (argsV: qHereValid): string =
     let sb = StringBuilder ()

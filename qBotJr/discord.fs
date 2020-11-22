@@ -184,9 +184,8 @@ module discord =
     | None -> None
 
   let getCategoryByName (guild: SocketGuild) (name: string): SocketCategoryChannel option =
-    guild.CategoryChannels |> Seq.tryFind (fun y -> y.Name = name)
-
-
+    let NAME = name.ToUpper()
+    guild.CategoryChannels |> Seq.tryFind (fun y -> y.Name.ToUpper() = NAME)
 
   let printCategoryNames (guild: SocketGuild) (sb: StringBuilder) =
     let wrapAtLen = 50

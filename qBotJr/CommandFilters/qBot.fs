@@ -15,7 +15,7 @@ module qBot =
   let _perm = UserPermission.Admin
 
   [<Literal>]
-  let _name = "QNEW"
+  let _name = "QBOT"
 
   [<Struct>] //val type
   type private qBotArgs =
@@ -51,7 +51,7 @@ module qBot =
       Command.create "-C" _perm callBack reactDistrust
       Command.create "-L" _perm callBack reactDistrust
     ]
-    |> MessageFilter.create args.Goo.Channel.Id (DateTimeOffset.Now.AddMinutes (5.0)) (Some args.Goo.User.Id)
+    |> MessageFilter.create args.Goo.GuildID (DateTimeOffset.Now.AddMinutes (5.0)) (Some args.Goo.User.Id)
 
   let private printMan (args: qBotArgs): string =
     let sb = StringBuilder ()
