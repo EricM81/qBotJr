@@ -36,7 +36,7 @@
     <Compile Include="CommandFilters\qAdd.fs" />
     <Compile Include="CommandFilters\qClose.fs" />
     <Compile Include="CommandFilters\qNext.fs" />
-    <Compile Include="CommandFilters\aHelp.fs" />
+    <Compile Include="CommandFilters\qHelp.fs" />
     <Compile Include="CommandFilters\commands.fs" />
     <Compile Include="Scheduler.fs" />
     <Compile Include="Service.fs" />

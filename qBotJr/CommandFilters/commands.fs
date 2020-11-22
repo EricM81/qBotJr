@@ -12,13 +12,5 @@
 //    //https://www.google.com/search?q=current+time+zone
 //
 module commands =
-    let staticFilters =
-        [|
-            qHere.Command
-            qBot.Command
-            qHelp.Command
-        |]
-    let creatorFilters =
-        [|
-            Creator.HiJr
-        |]
+  let staticFilters = [|qHere.Command; qBot.Command; qHelp.Command|]
+  let creatorFilters = [|Creator.HiJr|]

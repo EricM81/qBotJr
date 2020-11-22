@@ -1,4 +1,5 @@
 ﻿namespace qBotJr.T
+
 open System
 open Discord
 open Discord.WebSocket
@@ -6,59 +7,55 @@ open Discord.WebSocket
 
 //ref type
 type CommandLineArgs =
-    {
-    Switch : char option
-    Values : string list
-    }
-    static member create switch values =
-        {Switch = switch; Values = values}
+  {
+    Switch: char option
+    Values: string list
+  }
+
+  static member create switch values = {Switch = switch; Values = values}
 
 [<Struct>] //val type
 type ParsedMsg =
-    {
-    Message : SocketMessage
-    ParsedArgs : CommandLineArgs list
-    }
-    static member create  msg pArgs =
-        {ParsedMsg.Message = msg; ParsedArgs = pArgs}
+  {
+    Message: SocketMessage
+    ParsedArgs: CommandLineArgs list
+  }
 
-[<Struct>] //val type
-type UserPermission =
-    | None = 0
-    | Captain = 1
-    | Admin = 2
-    | Creator = 3
+  static member create msg pArgs = {ParsedMsg.Message = msg; ParsedArgs = pArgs}
+
 
 [<Struct>] //val type
 type GuildOO =
-    {
-    GuildID : uint64
-    Guild : SocketGuild
-    Channel : SocketTextChannel
-    User : IGuildUser //user of either the socket or rest variant
-    }
-    static member create user (channel : SocketTextChannel) =
-        {GuildID = channel.Guild.Id; Guild = channel.Guild; Channel = channel; User = user}
+  {
+    GuildID: uint64
+    Guild: SocketGuild
+    Channel: SocketTextChannel
+    User: IGuildUser //user of either the socket or rest variant
+  }
+
+  static member create user (channel: SocketTextChannel) =
+    {GuildID = channel.Guild.Id; Guild = channel.Guild; Channel = channel; User = user}
 
 type NewMessage =
-    {
-    Goo : GuildOO
-    Message : SocketMessage
-    }
-    static member create msg goo =
-        {NewMessage.Goo = goo; Message = msg}
+  {
+    Goo: GuildOO
+    Message: SocketMessage
+  }
+
+  static member create msg goo = {NewMessage.Goo = goo; Message = msg}
 
 
 [<Struct>]
 type MessageReaction =
-    {
-    Goo : GuildOO
-    Message : Cacheable<IUserMessage, uint64>
-    Reaction : SocketReaction
-    IsAdd : bool
-    }
-    static member create msg reaction isAdd goo =
-        {MessageReaction.Goo = goo; Message = msg; Reaction = reaction; IsAdd = isAdd}
+  {
+    Goo: GuildOO
+    Message: Cacheable<IUserMessage, uint64>
+    Reaction: SocketReaction
+    IsAdd: bool
+  }
+
+  static member create msg reaction isAdd goo =
+    {MessageReaction.Goo = goo; Message = msg; Reaction = reaction; IsAdd = isAdd}
 
 //[<Struct>] //val type
 //type ActionResult =
@@ -70,47 +67,53 @@ type ReactionAction = Server -> MessageReaction -> Server option
 
 //ref type
 type ReAction =
-    {
-    Emoji : string
-    Action : ReactionAction
-    }
-    static member create emoji action =
-        {ReAction.Emoji = emoji; Action = action}
+  {
+    Emoji: string
+    Action: ReactionAction
+  }
+
+  static member create emoji action = {ReAction.Emoji = emoji; Action = action}
 
 //ref type
 type ReactionFilter =
-    {
-    GuildID : uint64
-    MessageID : uint64
-    mutable TTL : DateTimeOffset
-    UserID : uint64 option
-    Items : ReAction list
-    }
-    static member create guild msgID ttl uid items =
-        {ReactionFilter.GuildID = guild; MessageID = msgID; TTL = ttl; UserID = uid; Items = items}
+  {
+    GuildID: uint64
+    MessageID: uint64
+    mutable TTL: DateTimeOffset
+    UserID: uint64 option
+    Items: ReAction list
+  }
+
+  static member create guild msgID ttl uid items =
+    {ReactionFilter.GuildID = guild; MessageID = msgID; TTL = ttl; UserID = uid; Items = items}
 
 
 //ref type
 type Command =
+  {
+    PrefixUpper: string
+    PrefixLength: int
+    RequiredPerm: UserPermission
+    PermSuccess: MessageAction
+    PermFailure: MessageAction
+  }
+
+  static member create (prefix: string) perm success failure =
     {
-    PrefixUpper : string
-    PrefixLength : int
-    RequiredPerm : UserPermission
-    PermSuccess : MessageAction
-    PermFailure : MessageAction
+      PrefixUpper = prefix.ToUpper ()
+      PrefixLength = prefix.Length
+      RequiredPerm = perm
+      PermSuccess = success
+      PermFailure = failure
     }
-    static member create (prefix : string) perm success failure =
-        {PrefixUpper = prefix.ToUpper(); PrefixLength = prefix.Length; RequiredPerm = perm; PermSuccess = success; PermFailure = failure}
 
 //ref type
 type MessageFilter =
-    {
-    GuildID : uint64
-    mutable TTL : DateTimeOffset
-    User : uint64 option
-    Items : Command list
-    }
-    static member create guild ttl user items =
-        {MessageFilter.GuildID = guild; TTL = ttl; User = user; Items = items}
+  {
+    GuildID: uint64
+    mutable TTL: DateTimeOffset
+    User: uint64 option
+    Items: Command list
+  }
 
-
+  static member create guild ttl user items = {MessageFilter.GuildID = guild; TTL = ttl; User = user; Items = items}

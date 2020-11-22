@@ -16,63 +16,57 @@ open qBotJr.T
 
 module parser =
 
-    let rec private findEnd (input : string) (pos : int) (len : int) (termChar : char) : int =
-        let x = if (pos < len) then input.[pos] else '\000'
-        match x with
-        | '\000' -> pos - 1
-        | x when x = termChar -> pos - 1
-        | _ -> findEnd input (pos + 1) len termChar
+  let rec private findEnd (input: string) (pos: int) (len: int) (termChar: char): int =
+    let x = if (pos < len) then input.[pos] else '\000'
+    match x with
+    | '\000' -> pos - 1
+    | x when x = termChar -> pos - 1
+    | _ -> findEnd input (pos + 1) len termChar
 
-    let rec private findWord (input : string) (pos : int) (len : int) : int * int =
-        let x = if (pos < len) then input.[pos] else '\000'
-        match x with
-        | '\000' -> 0, -1
-        | ' ' -> findWord input (pos + 1) len
-        | '\"' ->
-            let a = pos + 1
-            a, (findEnd input a len '\"')
-        | _ -> pos, (findEnd input (pos + 1) len ' ')
+  let rec private findWord (input: string) (pos: int) (len: int): int * int =
+    let x = if (pos < len) then input.[pos] else '\000'
+    match x with
+    | '\000' -> 0, -1
+    | ' ' -> findWord input (pos + 1) len
+    | '\"' ->
+        let a = pos + 1
+        a, (findEnd input a len '\"')
+    | _ -> pos, (findEnd input (pos + 1) len ' ')
 
-    let rec private parseValues (input : string) (pos : int) (len : int) (acc : string list) : int * string list =
-        let x = if (pos < len) then input.[pos] else '\000'
-        match x with
-        | '\000'
-        | '-' -> pos, List.rev acc
-        | ' ' -> parseValues input (pos + 1) len acc
-        | _ ->
-            let (word, word') = findWord input pos len
-            if word <= word' then
-                parseValues input (word' + 2) len ((input.Substring(word, (word' + 1 - word))) :: acc)
-            else
-                parseValues input (word' + 2) len acc
+  let rec private parseValues (input: string) (pos: int) (len: int) (acc: string list): int * string list =
+    let x = if (pos < len) then input.[pos] else '\000'
+    match x with
+    | '\000'
+    | '-' -> pos, List.rev acc
+    | ' ' -> parseValues input (pos + 1) len acc
+    | _ ->
+        let (word, word') = findWord input pos len
+        if word <= word' then
+          parseValues input (word' + 2) len ((input.Substring (word, (word' + 1 - word))) :: acc)
+        else
+          parseValues input (word' + 2) len acc
 
-    let private takeSwitchToUpper (input : string) (pos : int) (len : int) : char option =
-        if (pos < len) then input.[pos] |> Char.ToUpper |> Some else None
+  let private takeSwitchToUpper (input: string) (pos: int) (len: int): char option =
+    if (pos < len) then input.[pos] |> Char.ToUpper |> Some else None
 
-    let rec private parseArgs
-        (input : string)
-        (pos : int)
-        (len : int)
-        (acc : CommandLineArgs list)
-        : int * CommandLineArgs list
-        =
-        let x = if (pos < len) then input.[pos] else '\000'
-        match x with
-        | '\000' -> pos, List.rev acc
-        | '-' ->
-            let switch = takeSwitchToUpper input (pos + 1) len
-            let (pos', values) = parseValues input (pos + 2) len []
-            parseArgs input pos' len ((CommandLineArgs.create switch values) :: acc)
-        | ' ' -> parseArgs input (pos + 1) len acc
-        | _ ->
-            let (pos', values) = parseValues input pos len []
-            parseArgs input pos' len ((CommandLineArgs.create None values) :: acc)
+  let rec private parseArgs (input: string) (pos: int) (len: int) (acc: CommandLineArgs list): int * CommandLineArgs list =
+    let x = if (pos < len) then input.[pos] else '\000'
+    match x with
+    | '\000' -> pos, List.rev acc
+    | '-' ->
+        let switch = takeSwitchToUpper input (pos + 1) len
+        let (pos', values) = parseValues input (pos + 2) len []
+        parseArgs input pos' len ((CommandLineArgs.create switch values) :: acc)
+    | ' ' -> parseArgs input (pos + 1) len acc
+    | _ ->
+        let (pos', values) = parseValues input pos len []
+        parseArgs input pos' len ((CommandLineArgs.create None values) :: acc)
 
-    let rec parseInput (cmd : string) (input : string) : CommandLineArgs list =
-        //static filters listen for a word, i.e. "qBot ..." or "qHere ..."
-        //dynamic filters listen for a switch, i.e. "-a ..."
-        //we need to keep the switch, but can toss the static word
-        let startPOS = if cmd.Length > 1 && cmd.[0] = '-' then 0 else cmd.Length
-        //start parsing
-        let (_, args) = parseArgs input startPOS input.Length []
-        args
+  let rec parseInput (cmd: string) (input: string): CommandLineArgs list =
+    //static filters listen for a word, i.e. "qBot ..." or "qHere ..."
+    //dynamic filters listen for a switch, i.e. "-a ..."
+    //we need to keep the switch, but can toss the static word
+    let startPOS = if cmd.Length > 1 && cmd.[0] = '-' then 0 else cmd.Length
+    //start parsing
+    let (_, args) = parseArgs input startPOS input.Length []
+    args
