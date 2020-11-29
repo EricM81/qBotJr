@@ -198,7 +198,7 @@ module client =
 
   let private agent = MailboxProcessor.Start (processMail)
 
-  let registerFilters creatorFilters staticFilters =
+  let initFilters creatorFilters staticFilters =
     state.cmdCreatorFilters <- creatorFilters
     state.cmdStaticFilters <- staticFilters
 
@@ -210,4 +210,4 @@ module client =
 
   let AddReactionFilter (filter: ReactionFilter): unit = state.rtTempFilters <- filter :: state.rtTempFilters
 
-  let AddServerReactionFiler (filter: ReactionFilter): unit = state.rtServerFilters <- filter :: state.rtServerFilters
+  let AddServerReactionFilter (filter: ReactionFilter): unit = state.rtServerFilters <- filter :: state.rtServerFilters

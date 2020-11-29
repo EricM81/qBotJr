@@ -1,7 +1,6 @@
 ﻿namespace qBotJr
 
 open System
-open System.Diagnostics.Tracing
 open System.Text
 open Discord.WebSocket
 open qBotJr
@@ -23,31 +22,33 @@ module helper =
     | ValueNone -> ValueNone
 
   //https://forums.fsharp.org/t/thoughts-on-input-validation-pattern-from-a-noob/1541
-  let inline bindResult f acc =
+  let inline bindResult nextFun acc =
     match acc with
     | Ok (args, successFun) ->
-        match f args with
+        match nextFun args with
         | Ok param -> Ok (args, (successFun param))
         | Error args' -> Error args'
     | Error args ->
-        match f args with
+        match nextFun args with
         | Ok _ -> Error args
         | Error args' -> Error args'
 
   let (|>>) y x = bindResult x y
 
-  let inline bindResultAndArgs f acc =
+  let inline bindResultAndUpdate (nextFun, updateFun) acc =
     match acc with
     | Ok (args, successFun) ->
-        match f args with
-        | Ok (args', p) -> Ok (args', (successFun p))
-        | Error args' -> Error args'
+        match nextFun args with
+        | Ok param ->
+          ((updateFun args param), (successFun param)) |> Ok
+        | Error args' -> updateFun args' None |> Error
     | Error args ->
-        match f args with
-        | Ok (args', _) -> Error args'
-        | Error args' -> Error args'
+        match nextFun args with
+        | Ok param ->
+          updateFun args param |> Error
+        | Error args' -> updateFun args' None |> Error
 
-  let (|+>) y x = bindResultAndArgs x y
+  let (|+>) y x = bindResultAndUpdate x y
 
   let bindB f x =
     match x with
@@ -197,37 +198,4 @@ module helper =
 
     print true strList ""
 
-  let filterSortPlayers (phs: PlayerHere list) =
-    let rec isMatch (items: PlayerHere list) (acc: PlayerHere list) =
-      match items with
-      | [] -> acc
-      | ph::px ->
-        if ph.isHere = true && ph.isBanned = false then
-          ph::acc
-        else
-          acc
-        |> isMatch px
-    isMatch phs []
-    |> List.sortBy (fun p -> p.GamesPlayed)
 
-  let filterSortModePlayers (mode: Mode) (players: PlayerHere list) =
-    let rec tryFindPlayerHere (pid: uint64) (px: PlayerHere list): PlayerHere voption =
-      match px with
-      | [] -> ValueNone
-      | p::px ->
-        if p.Player.ID = pid then
-          ValueSome p
-        else
-          tryFindPlayerHere pid px
-
-    let rec matchMode (modePlayers: Player list) (acc: PlayerHere list) =
-      match modePlayers with
-      | [] -> acc
-      | mp::mpx ->
-        (match tryFindPlayerHere mp.ID players with
-        | ValueSome ph -> ph::acc
-        | ValueNone -> acc)
-        |> matchMode mpx
-
-    matchMode mode.Players []
-    |> List.sortBy (fun p -> p.GamesPlayed)

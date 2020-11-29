@@ -104,8 +104,8 @@ module qBot =
       | true, r :: rs -> acc + r |> printRoles false rs
       | false, r :: rs -> acc + ", " + r |> printRoles false rs
 
-    sprintf "Current Setting:\nqBot -a %s -c %s -L %s" (printRoles true (argsV.AdminRoles |> List.map socketRoleToStrId) "")
-      (printRoles true (argsV.CaptainRoles |> List.map socketRoleToStrId) "") (quoteEscape argsV.LobbyCategory.Name)
+    sprintf "Current Setting:\nqBot -a %s -c %s -L %s" (printRoles true (argsV.AdminRoles |> List.map mentionRoleID) "")
+      (printRoles true (argsV.CaptainRoles |> List.map mentionRoleID) "") (quoteEscape argsV.LobbyCategory.Name)
 
   let private successFun (argsV: qBotValid) =
     let gSettings = config.GetGuildSettings argsV.Server.GuildID
@@ -135,6 +135,11 @@ module qBot =
 
     init cmdArgs configArgs
 
+  let private validateShowMan (args: qBotArgs) =
+    match args.ShowMan with
+    | false -> Ok (args, (qBotValid.create args.Server args.Goo))
+    | true -> Error args
+
   let private validateAdmins (args: qBotArgs) =
     match validateRoles args.Goo.Guild args.AdminRoles with
     | Ok srList -> Ok srList
@@ -154,7 +159,7 @@ module qBot =
     | None -> Error ({args with LobbyCat = None; Errors = "Category Is Required" :: args.Errors})
 
   let private validate (args: qBotArgs) =
-    if args.ShowMan then Error args else Ok (args, (qBotValid.create args.Server args.Goo))
+    validateShowMan args
     |>> validateAdmins
     |>> validateCaptains
     |>> validateCategory
@@ -174,9 +179,9 @@ module qBot =
         |> errorFun args
 
   let Run (server: Server) (goo: GuildOO) (pm: ParsedMsg): Server option =
-    let settings = config.GetGuildSettings goo.Channel.Guild.Id
-    let adminRoles = getRolesByIDs goo.Channel.Guild settings.AdminRoles |> List.map socketRoleToStrId
-    let captainRoles = getRolesByIDs goo.Channel.Guild settings.CaptainRoles |> List.map socketRoleToStrId
+    let settings = config.GetGuildSettings goo.GuildID
+    let adminRoles = getRolesByIDs goo.Channel.Guild settings.AdminRoles |> List.map mentionRoleID
+    let captainRoles = getRolesByIDs goo.Channel.Guild settings.CaptainRoles |> List.map mentionRoleID
     let lobbiesCat = settings.LobbiesCategory |> bind getCategoryById |> bind (fun cat -> Some cat.Name)
 
     qBotArgs.create server goo adminRoles captainRoles lobbiesCat |> _run pm

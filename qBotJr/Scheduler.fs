@@ -1,17 +1,15 @@
 ﻿namespace qBotJr
 
-open Discord
-open Discord.Rest
 open FSharpx.Control
 open qBotJr.T
-
+open discord
 
 
 module Scheduler =
 
   module here =
 
-    let qHereSleep: int = 5 * 1000
+    let qHereSleep: int = 120 * 1000
 
     let rec tryPickPlayersHere (p: Player) (searchH: PlayerHere list): PlayerHere option =
       match searchH with
@@ -26,9 +24,6 @@ module Scheduler =
           | Some ph -> ph :: acc |> filterPlayersHere hereP ms
           | _ -> filterPlayersHere hereP ms acc
 
-    let sendUpdate (restMsg: RestUserMessage) (content: string): unit =
-      let content' = content |> Optional<string>
-      restMsg.ModifyAsync (fun msgP -> msgP.Content <- content') |> ignore
 
     let rec iterMode (pHere: PlayerHere list) (ms: Mode list) =
       match ms with
@@ -38,13 +33,13 @@ module Scheduler =
             filterPlayersHere pHere m.Players []
             |> helper.printPlayersList
             |> (+) m.HereMsg.Header
-            |> sendUpdate m.HereMsg.RestMsg
+            |> updateMsg m.HereMsg.RestMsg
           iterMode pHere ms
 
     let iterServer (_: uint64) (server: Server) =
       match server.HereMsg with
       | Some h when server.PlayerListIsDirty = true ->
-          helper.printPlayersList server.PlayersHere |> (+) h.Header |> sendUpdate h.RestMsg
+          helper.printPlayersList server.PlayersHere |> (+) h.Header |> updateMsg h.RestMsg
           iterMode server.PlayersHere server.Modes
       | _ -> ()
 

@@ -2,9 +2,7 @@
 
 open System
 open System.Text
-open System.Threading.Tasks
 open Discord
-open Discord.Rest
 open Discord.WebSocket
 open qBotJr.T
 open helper
@@ -159,15 +157,11 @@ module qHere =
   let private removeOldHereMsgFilter msgID (items: ReactionFilter list) =
     items |> List.filter (fun item -> msgID <> item.MessageID)
 
-  let private successAsync (argsV: qHereValid) announceHeader (t: Task<RestUserMessage>): Server option =
-    async {
-      let server = argsV.Server
-      let! restMsg = t |> Async.AwaitTask
-      let server' = {server with HereMsg = HereMessage.create restMsg argsV.Emoji announceHeader |> Some}
-
-      AsyncTask (fun state ->
+  let private createAsyncTask (restMsg: IUserMessage) (argsV: qHereValid) : AsyncTask =
+    let server = argsV.Server
+    AsyncTask (fun state ->
         //seed the reaction to say "I'm here"
-        Emoji (argsV.Emoji) |> restMsg.AddReactionAsync |> ignore
+        addReaction restMsg argsV.Emoji |> ignore
         //if replacing a hereMsg, remove old reaction filter and reset everyone's isHere
         match server.HereMsg with
         | Some msg ->
@@ -175,31 +169,38 @@ module qHere =
             server.PlayersHere |> List.iter (fun player -> player.isHere <- false)
         | None -> ()
         //create new hereMsg
-        state.Servers <- state.Servers |> Map.add server.GuildID server'
+        state.Servers <- state.Servers |> Map.add server.GuildID server
         //register filter for one reactions
         [ReAction.create argsV.Emoji updateHereList]
         |> ReactionFilter.create server.GuildID restMsg.Id DateTimeOffset.MaxValue None
-        |> client.AddServerReactionFiler)
-      |> UpdateState
-      |> client.Receive
-    }
-    |> Async.Start
-    None
+        |> client.AddServerReactionFilter)
 
   let private successFun (argsV: qHereValid): Server option =
-    updateAnnChl argsV
-    let announceHeader = printHeader argsV
-    let restMsg = sendMsg argsV.AnnChnl announceHeader
-    match restMsg with
-    | Some t ->
-        printValid argsV |> sendMsg argsV.Goo.Channel |> ignore
-        successAsync argsV announceHeader t
-    | None -> None
+    async {
+      updateAnnChl argsV
+      let announceHeader = printHeader argsV
+      let! restMsg = sendMsg argsV.AnnChnl announceHeader |> Async.AwaitTask
+      {argsV with
+        Server =
+          {argsV.Server with HereMsg = HereMessage.create restMsg argsV.Emoji announceHeader |> Some}
+      }
+      |> createAsyncTask restMsg
+      |> UpdateState
+      |> client.Receive
+
+      }
+    |> Async.Start
+    None
 
   let private errorFun (args: qHereArgs) filter =
     printMan args |> sendMsg args.Goo.Channel |> ignore
     client.AddMessageFilter filter
     None
+
+  let private validateShowMan (args: qHereArgs) =
+    match args.ShowMan with
+    | false -> Ok (args, (qHereValid.create args.Server args.Goo))
+    | true -> Error args
 
   let private validateChannel (args: qHereArgs) =
     match args.AnnChnl with
@@ -220,7 +221,7 @@ module qHere =
     | None -> Error {args with Errors = "Type of Ping is Required" :: args.Errors}
 
   let inline private validate (args: qHereArgs) =
-    if args.ShowMan then Error args else Ok (args, (qHereValid.create args.Server args.Goo))
+    validateShowMan args
     |>> validatePing
     |>> validateChannel
     |> function

@@ -38,18 +38,23 @@ type PlayerHere =
     {PlayerHere.Player = Player.create user; GamesPlayed = 0s; isHere = here; isBanned = false; Role = role}
 
 //ref type
-type Lobby = {Name: string; Channel: SocketGuildChannel; mutable Players: Player list}
+type Lobby =
+  {Name: string; Channel: ITextChannel; mutable Players: PlayerHere list}
+  static member create (c: ITextChannel) px =
+    {Lobby.Name = c.Name; Channel = c; Players = px}
+
+
 
 [<Struct>] //val type
 type HereMessage =
   {
     MessageID: uint64
     Emoji: string
-    RestMsg: RestUserMessage
+    RestMsg: IUserMessage
     Header: string
   }
 
-  static member create (restMsg: RestUserMessage) emoji annHeader =
+  static member create (restMsg: IUserMessage) emoji annHeader =
     {MessageID = restMsg.Id; Emoji = emoji; RestMsg = restMsg; Header = annHeader}
 
 //ref type

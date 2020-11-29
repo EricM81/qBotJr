@@ -5,6 +5,7 @@ open System.Text
 open System.Threading.Tasks
 open Discord
 open Discord.WebSocket
+open System.Collections
 open FSharp.Control
 open qBotJr
 open qBotJr.T
@@ -16,7 +17,19 @@ module discord =
   [<Literal>]
   let botID = 760644805969313823uL
 
-  module private config =
+  [<Literal>]
+  let userPrefix = "<@!"
+
+  [<Literal>]
+  let channelPrefix = "<#"
+
+  [<Literal>]
+  let rolePrefix = "<@&"
+
+  [<Literal>]
+  let suffix = ">"
+
+  module config =
     let clientConfig =
       let intents = GatewayIntents.GuildMessages ||| GatewayIntents.GuildMessageReactions ||| GatewayIntents.Guilds
       let tmp = DiscordSocketConfig ()
@@ -92,16 +105,181 @@ module discord =
 
   module private _helper =
 
-    let stripUID (prefix: string) (suffix: char) (value: string): uint64 option =
+    let stripUID (prefix: string) (suffix: string) (value: string): uint64 option =
       let len = value.Length
       let preLen = prefix.Length
+      let sufLen = suffix.Length
       if (value.StartsWith (prefix)) && (value.EndsWith (suffix)) then
-        let tmp = (value.Substring ((prefix.Length), (len - preLen - 1)))
+        let tmp = (value.Substring ((prefix.Length), (len - preLen - sufLen)))
         match (UInt64.TryParse tmp) with
         | true, uid -> Some uid
         | _ -> None
       else
         None
+
+  module perms =
+
+    let everyonePerms =
+      let createInstantInvite = PermValue.Deny
+      let manageChannel = PermValue.Deny
+      let addReactions = PermValue.Deny
+      let viewChannel = PermValue.Allow
+      let sendMessages = PermValue.Deny
+      let sendTTSMessages = PermValue.Deny
+      let manageMessages = PermValue.Deny
+      let embedLinks = PermValue.Deny
+      let attachFiles = PermValue.Deny
+      let readMessageHistory = PermValue.Allow
+      let mentionEveryone = PermValue.Deny
+      let useExternalEmojis = PermValue.Deny
+      let connect = PermValue.Deny
+      let speak = PermValue.Deny
+      let muteMembers = PermValue.Deny
+      let deafenMembers = PermValue.Deny
+      let moveMembers = PermValue.Deny
+      let useVoiceActivation = PermValue.Deny
+      let manageRoles = PermValue.Deny
+      let manageWebhooks = PermValue.Deny
+      let prioritySpeaker = PermValue.Deny
+      let stream = PermValue.Deny
+
+      OverwritePermissions(
+        createInstantInvite,
+        manageChannel,
+        addReactions,
+        viewChannel,
+        sendMessages,
+        sendTTSMessages,
+        manageMessages,
+        embedLinks,
+        attachFiles,
+        readMessageHistory,
+        mentionEveryone,
+        useExternalEmojis,
+        connect,
+        speak,
+        muteMembers,
+        deafenMembers,
+        moveMembers,
+        useVoiceActivation,
+        manageRoles,
+        manageWebhooks,
+        prioritySpeaker,
+        stream)
+
+    let captainPerms =
+      let createInstantInvite = PermValue.Deny
+      let manageChannel = PermValue.Allow
+      let addReactions = PermValue.Allow
+      let viewChannel = PermValue.Allow
+      let sendMessages = PermValue.Allow
+      let sendTTSMessages = PermValue.Allow
+      let manageMessages = PermValue.Allow
+      let embedLinks = PermValue.Allow
+      let attachFiles = PermValue.Allow
+      let readMessageHistory = PermValue.Allow
+      let mentionEveryone = PermValue.Allow
+      let useExternalEmojis = PermValue.Allow
+      let connect = PermValue.Allow
+      let speak = PermValue.Allow
+      let muteMembers = PermValue.Allow
+      let deafenMembers = PermValue.Allow
+      let moveMembers = PermValue.Allow
+      let useVoiceActivation = PermValue.Allow
+      let manageRoles = PermValue.Allow
+      let manageWebhooks = PermValue.Allow
+      let prioritySpeaker = PermValue.Allow
+      let stream = PermValue.Allow
+
+      OverwritePermissions(
+        createInstantInvite,
+        manageChannel,
+        addReactions,
+        viewChannel,
+        sendMessages,
+        sendTTSMessages,
+        manageMessages,
+        embedLinks,
+        attachFiles,
+        readMessageHistory,
+        mentionEveryone,
+        useExternalEmojis,
+        connect,
+        speak,
+        muteMembers,
+        deafenMembers,
+        moveMembers,
+        useVoiceActivation,
+        manageRoles,
+        manageWebhooks,
+        prioritySpeaker,
+        stream)
+
+    let playerPerms =
+      let createInstantInvite = PermValue.Deny
+      let manageChannel = PermValue.Deny
+      let addReactions = PermValue.Allow
+      let viewChannel = PermValue.Allow
+      let sendMessages = PermValue.Allow
+      let sendTTSMessages = PermValue.Deny
+      let manageMessages = PermValue.Deny
+      let embedLinks = PermValue.Allow
+      let attachFiles = PermValue.Allow
+      let readMessageHistory = PermValue.Allow
+      let mentionEveryone = PermValue.Deny
+      let useExternalEmojis = PermValue.Allow
+      let connect = PermValue.Allow
+      let speak = PermValue.Allow
+      let muteMembers = PermValue.Deny
+      let deafenMembers = PermValue.Deny
+      let moveMembers = PermValue.Deny
+      let useVoiceActivation = PermValue.Allow
+      let manageRoles = PermValue.Deny
+      let manageWebhooks = PermValue.Deny
+      let prioritySpeaker = PermValue.Deny
+      let stream = PermValue.Allow
+
+      OverwritePermissions(
+        createInstantInvite,
+        manageChannel,
+        addReactions,
+        viewChannel,
+        sendMessages,
+        sendTTSMessages,
+        manageMessages,
+        embedLinks,
+        attachFiles,
+        readMessageHistory,
+        mentionEveryone,
+        useExternalEmojis,
+        connect,
+        speak,
+        muteMembers,
+        deafenMembers,
+        moveMembers,
+        useVoiceActivation,
+        manageRoles,
+        manageWebhooks,
+        prioritySpeaker,
+        stream)
+
+    let getPerms (guild: SocketGuild) (playerIDs: uint64 list): Generic.IEnumerable<Overwrite> =
+      let rec loopIDs (perm) (target: PermissionTarget) (roles: uint64 list) acc =
+        match roles with
+        | [] -> acc
+        | x::xs -> Overwrite(x, target, perm) |> prepend acc |> loopIDs perm target xs
+
+      let settings = config.GetGuildSettings guild.Id
+      let adminIDs = settings.AdminRoles
+      let captainIDs = settings.CaptainRoles
+      let everyone = [guild.EveryoneRole.Id]
+      upcast(
+        []
+        |> loopIDs captainPerms PermissionTarget.Role adminIDs
+        |> loopIDs captainPerms PermissionTarget.Role captainIDs
+        |> loopIDs playerPerms PermissionTarget.User playerIDs
+        |> loopIDs everyonePerms PermissionTarget.Role everyone
+      )
 
   let registerEvents () =
     discoClient.add_Log (fun log ->
@@ -126,23 +304,27 @@ module discord =
     }
 
   let parseDiscoUser (name: string): uint64 option =
-    let prefix = "<@!"
-    let suffix = '>'
-    _helper.stripUID prefix suffix name
+    _helper.stripUID userPrefix suffix name
+
+  let mentionUserID (id: uint64): string = userPrefix + id.ToString() + suffix
 
   let parseDiscoRole (guild: SocketGuild) (role: string): Result<SocketRole, string> =
     let inline tryFind (id): SocketRole option = guild.Roles |> Seq.tryFind (fun role -> role.Id = id)
-    let prefix = "<@&"
-    let suffix = '>'
-    _helper.stripUID prefix suffix role
+    _helper.stripUID rolePrefix suffix role
     |> bind tryFind
     |> function
     | Some s -> Ok s
     | None -> Error role
 
-  let socketRoleToStrId (sr: SocketRole): string = sprintf "<@&%i>" sr.Id
+  let mentionRoleID (sr: SocketRole): string = rolePrefix + sr.Id.ToString() + suffix
 
-  let socketRoleToStrName (sr: SocketRole): string = sr.Name |> quoteEscape
+  let parseDiscoChannel (name: string): uint64 option =
+    _helper.stripUID channelPrefix suffix name
+
+  let mentionChannelID (chl: SocketChannel): string = channelPrefix + chl.Id.ToString() + suffix
+
+
+  //let socketRoleToStrName (sr: SocketRole): string = sr.Name |> quoteEscape
 
   let validateRoles (guild: SocketGuild) (roles: string list): Result<SocketRole list, string list * string list> =
     let rec validate (roles: string list) (acc: Result<SocketRole list, string list * string list>) =
@@ -158,11 +340,6 @@ module discord =
           | Error (strList, errList), Error (err) -> Error (strList, (err :: errList)) |> validate strList
 
     Ok [] |> validate roles
-
-  let parseDiscoChannel (name: string): uint64 option =
-    let prefix = "<#"
-    let suffix = '>'
-    _helper.stripUID prefix suffix name
 
   let getRolesByIDs (guild: SocketGuild) (ids: uint64 list): SocketRole list =
     let rec getRolesByIDsInner (roles: uint64 list) (acc: SocketRole list) =
@@ -230,10 +407,15 @@ module discord =
   let getChannelByName (guild: SocketGuild) (name: string): SocketGuildChannel option =
     guild.Channels |> Seq.tryFind (fun y -> y.Name = name)
 
-  let sendMsg (channel: SocketChannel) (msg: string) =
-    match channel with
-    | :? SocketTextChannel as x -> x.SendMessageAsync msg |> Some
-    | _ -> None
+  let sendMsg (channel: ITextChannel) (msg: string) =
+    channel.SendMessageAsync msg
+
+  let updateMsg (msg: IUserMessage) (content: string): unit =
+      let content' = content |> Optional<string>
+      msg.ModifyAsync (fun msgP -> msgP.Content <- content') |> ignore
+
+  let addReaction (msg: IUserMessage) (emoji: string) =
+    msg.AddReactionAsync((Emoji emoji), config.restClientOptions)
 
   let reactDistrust (_: Server) (_: GuildOO) (parsedM: ParsedMsg): Server option =
     emojis.Distrust |> Emoji |> parsedM.Message.AddReactionAsync |> Async.AwaitTask |> ignore
