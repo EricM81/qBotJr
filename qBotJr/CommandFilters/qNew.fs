@@ -10,13 +10,12 @@ open helper
 open discord
 
 module qNew =
-
+  [<Literal>]
+  let _perm = UserPermission.Admin
+  [<Literal>]
+  let _name = "QNEW"
 
   module private T =
-    [<Literal>]
-    let _perm = UserPermission.Admin
-    [<Literal>]
-    let _name = "QNEW"
 
     [<Struct>] //val type
     type qNewArgs =
@@ -354,4 +353,4 @@ module qNew =
     let args = T.qNewArgs.create server goo |> T.getServerSettings
     _msgRun args server goo pm
 
-  let Command = Command.create T._name T._perm Run reactDistrust
+  let Command = Command.create _name _perm Run reactDistrust
