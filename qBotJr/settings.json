@@ -3,5 +3,6 @@
   "LogFileRoot": "C:\\Users\\EricM\\Desktop\\qBotJr\\",
   "GuildSettingsRoot": "C:\\Users\\EricM\\Desktop\\qBotJr\\Guilds\\",
   "CleanUpTaskDelay": 10000,
-  "UpdateHereMsgsDelay": 3000
+  "UpdateHereMsgsDelay": 3000,
+  "CreatorDiscordID": 442438729207119892
 }

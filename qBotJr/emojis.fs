@@ -140,7 +140,7 @@ module emojis =
   let playerY = "🇾"
   let playerZ = "🇿"
 
-  let Items =
+  let letterItems =
     [
       playerA
       playerB
@@ -170,8 +170,21 @@ module emojis =
       playerZ
     ]
 
+  let sports =
+    [
+      GameMode0Soccer
+      GameMode1Baseball
+      GameMode2Basketball
+      GameMode3Football
+      GameMode4Frisbee
+      GameMode5Bowling
+      GameMode6Hockey
+      GameMode7PingPong
+      GameMode8Boxing
+      GameMode9Karate
+    ]
   let private rng = Random ()
 
   let GetRandomLetter () =
-    let index = rng.Next (Items.Length)
-    if index < Items.Length then List.item index Items else playerA
+    let index = rng.Next (letterItems.Length)
+    if index < letterItems.Length then List.item index letterItems else playerA

@@ -62,7 +62,10 @@ module client =
 
     //cmds I can run for testing....or memeing
     let searchCreator (nm: NewMessage): ContinueOption<NewMessage, FoundMessage> =
-      if (UserPermission.Creator) = isCreator nm.Goo.User then matchArray nm state.cmdCreatorFilters else Continue nm
+      if isCreator nm.Goo.User = UserPermission.Creator then
+        matchArray nm state.cmdCreatorFilters
+      else
+        Continue nm
 
     let matchList (nm: NewMessage) (items: Command list): Command option =
       items |> List.tryFind (fun cmd -> matchPrefix cmd nm)
@@ -133,11 +136,11 @@ module client =
 
 
   let inline private execCmd (cmd: Command) server (nm: NewMessage) =
-    if cmd.RequiredPerm = UserPermission.Admin then
+    if cmd.MinPermission = UserPermission.Admin then
       add1ServerTTL server
     let pm = command.parseMsg cmd nm.Message
     let goo = nm.Goo
-    if (getPerm goo.User) >= cmd.RequiredPerm then cmd.PermSuccess server goo pm else cmd.PermFailure server goo pm
+    if (getPerm goo.User) >= cmd.MinPermission then cmd.PermSuccess server goo pm else cmd.PermFailure server goo pm
 
   let inline private execRt action server mr = action server mr
 

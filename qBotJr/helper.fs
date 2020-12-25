@@ -106,13 +106,7 @@ module helper =
     | Found e' -> f a b c d e'
     | _ -> ()
 
-  //if no perm has been found for a user, keep searching
-  let inline bindPerms permSearch user currentPerm =
-    match currentPerm with
-    | UserPermission.None -> permSearch user //keep searching
-    | _ -> currentPerm //perm found
-
-  let isCreator (gUser: IGuildUser) = if gUser.Id = 442438729207119892UL then UserPermission.Creator else UserPermission.None
+  let isCreator (gUser: IGuildUser) = if gUser.Id = config.BotSettings.CreatorDiscordID then UserPermission.Creator else UserPermission.None
 
   let isDiscordAdmin (gUser: IGuildUser) =
     if gUser.GuildPermissions.Administrator = true then UserPermission.Admin else UserPermission.None
@@ -130,7 +124,7 @@ module helper =
       UserPermission.None
 
   let getPerm gUser: UserPermission =
-    isCreator gUser |> bindPerms isDiscordAdmin gUser |> bindPerms isGuildAdmin gUser |> bindPerms isGuildCaptain gUser
+    isCreator gUser ||| isDiscordAdmin gUser ||| isGuildAdmin gUser ||| isGuildCaptain gUser
 
   let bprintfn (sb: StringBuilder) = Printf.kprintf (fun s -> sb.AppendLine s |> ignore)
 
@@ -197,5 +191,41 @@ module helper =
       | false, p :: px -> ", " + (quoteEscape p) |> print false px
 
     print true strList ""
+
+  let setPlayerHere (server: Server) (user: IGuildUser) (isHere: bool) =
+    server.PlayersHere
+    |> List.tryFind (fun player -> player.Player.ID = user.Id)
+    |> function
+    | Some p ->
+        p.isHere <- isHere
+        server.PlayerListIsDirty <- true
+        None
+    | None ->
+        let p = getPerm user |> PlayerHere.create user isHere
+        Some {server with PlayersHere = p :: server.PlayersHere; PlayerListIsDirty = true}
+
+  let setPlayerMode (server: Server) (modeID: uint64) (user: IGuildUser) (isHere: bool) =
+    let swapModes (mOld: Mode) (mNew: Mode) =
+      mNew::(server.Modes |> List.filter (fun x -> x.Name <> mOld.Name))
+    let filterPlayers mode =
+      let players' =
+        mode.Players |> List.filter (fun x -> x.ID <> user.Id)
+      match isHere with
+      | true -> Player.create user :: players'
+      | _ -> players'
+    let server' =
+      match setPlayerHere server user isHere with
+      | Some s -> s
+      | _ -> server
+    let modeOpt = server.Modes |> List.tryFind (fun m -> m.HereMsg.MessageID = modeID)
+    match modeOpt with
+    | Some m ->
+      let mode' = {m with Players = filterPlayers m}
+      {server' with Modes = swapModes m mode'}
+    | _ -> server'
+
+
+
+
 
 

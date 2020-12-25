@@ -5,12 +5,12 @@ open Discord
 open Discord.WebSocket
 open Discord.Rest
 
-[<Struct>] //val type
+[<Flags>] //val type
 type UserPermission =
-  | None = 0
-  | Captain = 1
-  | Admin = 2
-  | Creator = 3
+  | None = 0b0000000
+  | Captain = 0b0000001
+  | Admin = 0b0000010
+  | Creator = 0b0000100
 
 [<Struct>]
 type Player =
@@ -58,7 +58,13 @@ type HereMessage =
     {MessageID = restMsg.Id; Emoji = emoji; RestMsg = restMsg; Header = annHeader}
 
 //ref type
-type Mode = {Name: string; HereMsg: HereMessage; Players: Player list; PlayerListIsDirty: bool}
+type Mode =
+  {
+    Name: string
+    HereMsg: HereMessage
+    Players: Player list
+    PlayerListIsDirty: bool
+  }
 
 //ref type
 type Server =

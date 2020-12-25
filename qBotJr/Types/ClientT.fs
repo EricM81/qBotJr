@@ -93,7 +93,7 @@ type Command =
   {
     PrefixUpper: string
     PrefixLength: int
-    RequiredPerm: UserPermission
+    MinPermission: UserPermission
     PermSuccess: MessageAction
     PermFailure: MessageAction
   }
@@ -102,7 +102,7 @@ type Command =
     {
       PrefixUpper = prefix.ToUpper ()
       PrefixLength = prefix.Length
-      RequiredPerm = perm
+      MinPermission = perm
       PermSuccess = success
       PermFailure = failure
     }

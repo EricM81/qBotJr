@@ -8,6 +8,7 @@ type BotSettings =
     GuildSettingsRoot: string
     CleanUpTaskDelay: int
     UpdateHereMsgsDelay: int
+    CreatorDiscordID: uint64
   }
 
 [<Struct>]

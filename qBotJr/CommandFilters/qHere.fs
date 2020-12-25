@@ -156,17 +156,7 @@ module qHere =
       sprintf "Current Setting:\nqHere %s -a %s" (argsV.Ping.ToString ()) argsV.AnnChnl.Name
 
     let updateHereList (server: Server) (mr: MessageReaction): Server option =
-      let user = mr.Goo.User
-      server.PlayersHere
-      |> List.tryFind (fun player -> player.Player.ID = user.Id)
-      |> function
-      | Some p ->
-          p.isHere <- mr.IsAdd
-          server.PlayerListIsDirty <- true
-          None
-      | None ->
-          let p = getPerm user |> PlayerHere.create user mr.IsAdd
-          Some {server with PlayersHere = p :: server.PlayersHere; PlayerListIsDirty = true}
+      setPlayerHere server mr.Goo.User mr.IsAdd
 
     let removeOldHereMsgFilter msgID (items: ReactionFilter list) =
       items |> List.filter (fun item -> msgID <> item.MessageID)

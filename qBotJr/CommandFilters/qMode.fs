@@ -39,9 +39,10 @@ module qMode =
         AnnChnl: SocketTextChannel
         Ping: PingType
         Emoji: string
+        Description: string
       }
-      static member create s g ping announcements =
-        {qModeValid.Server = s; Goo = g; Ping = ping; AnnChnl = announcements; Emoji = emojis.RaiseHands}
+      static member create s g desc ping announcements =
+        {qModeValid.Server = s; Goo = g; Description = desc; Ping = ping; AnnChnl = announcements; Emoji = emojis.RaiseHands}
 
     let cmdStrToArgs (xs: CommandLineArgs list) (acc: qModeArgs): qModeArgs =
       let rec init (xs: CommandLineArgs list) (acc: qModeArgs): qModeArgs =
@@ -141,51 +142,28 @@ module qMode =
       let a format = bprintfn sb format
 
       a "%s" <| pingToString argsV.Ping
-      a ">>> **React with %s to join the queue!**" argsV.Emoji
+      a ">>> **React with %s to sign up for a special game mode!**" argsV.Emoji
       a "```"
-      a
-        "You will get a ping in a new channel, made just for players in your match. You only have a few minutes to join before getting marked as afk, so please watch for the ping!"
+      a "%s" argsV.Description
       a "```"
-      a "**Please, Un-React to the message if you step away!**"
-      a "```You won't lose your place in line."
-      a "I'll just skip you until you react agane!```"
 
       sb.ToString ()
 
     let printValid (argsV: qModeValid): string =
-      sprintf "Current Setting:\nqHere %s -a %s" (argsV.Ping.ToString ()) argsV.AnnChnl.Name
+      sprintf "Current Setting:\nqMode %s -a %s -d \"%s\"" (argsV.Ping.ToString ()) argsV.AnnChnl.Name argsV.Description
 
-    let updateHereList (server: Server) (mr: MessageReaction): Server option =
-      let user = mr.Goo.User
-      server.PlayersHere
-      |> List.tryFind (fun player -> player.Player.ID = user.Id)
-      |> function
-      | Some p ->
-          p.isHere <- mr.IsAdd
-          server.PlayerListIsDirty <- true
-          None
-      | None ->
-          let p = getPerm user |> PlayerHere.create user mr.IsAdd
-          Some {server with PlayersHere = p :: server.PlayersHere; PlayerListIsDirty = true}
-
-    let removeOldHereMsgFilter msgID (items: ReactionFilter list) =
-      items |> List.filter (fun item -> msgID <> item.MessageID)
+    let updateHereList (modeID: uint64) (server: Server) (mr: MessageReaction): Server option =
+      setPlayerMode server modeID mr.Goo.User mr.IsAdd |> Some
 
     let createAsyncTask (restMsg: IUserMessage) (argsV: qModeValid) : AsyncTask =
       let server = argsV.Server
       AsyncTask (fun state ->
           //seed the reaction to say "I'm here"
           addReaction restMsg argsV.Emoji |> ignore
-          //if replacing a hereMsg, remove old reaction filter and reset everyone's isHere
-          match server.HereMsg with
-          | Some msg ->
-              state.rtServerFilters <- removeOldHereMsgFilter msg.MessageID state.rtServerFilters
-              server.PlayersHere |> List.iter (fun player -> player.isHere <- false)
-          | None -> ()
-          //create new hereMsg
+
           state.Servers <- state.Servers |> Map.add server.GuildID server
           //register filter for one reactions
-          [ReAction.create argsV.Emoji updateHereList]
+          [ReAction.create argsV.Emoji (updateHereList restMsg.Id)]
           |> ReactionFilter.create server.GuildID restMsg.Id DateTimeOffset.MaxValue None
           |> client.AddServerReactionFilter)
 
@@ -209,6 +187,9 @@ module qMode =
   module private validate =
     open T
 
+    let validateName (args:qModeArgs) =
+      //unique name
+      ()
     let validateShowMan (args: qModeArgs) =
       match args.ShowMan with
       | false -> Ok (args, (qModeValid.create args.Server args.Goo))

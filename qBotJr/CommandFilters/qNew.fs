@@ -215,7 +215,7 @@ module qNew =
         t.PermissionOverwrites <-
           argsV.Players
           |> List.map (fun p -> p.Player.ID)
-          |> perms.getPerms argsV.Goo.Guild |> Optional
+          |> perms.getLobbyPerms argsV.Goo.Guild |> Optional
 
       argsV.Goo.Guild.CreateTextChannelAsync(names.getRand(), (Action<_> updateFun), config.restClientOptions)
 
@@ -304,7 +304,7 @@ module qNew =
       let matchExp p =
         p.isHere = true && // need to make sure someone is here
         p.isBanned = false && //that's not banned
-        p.Role > UserPermission.Captain && //with at least the captain permission
+        p.Role.HasFlag(UserPermission.Captain) && //with at least the captain permission
         p.Player.ID <> callerID  //that's not the person looking for a captain
       let captainOpt =
         match args.Captain with

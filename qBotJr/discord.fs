@@ -119,151 +119,135 @@ module discord =
 
   module perms =
 
-    let everyonePerms =
-      let createInstantInvite = PermValue.Deny
-      let manageChannel = PermValue.Deny
-      let addReactions = PermValue.Deny
-      let viewChannel = PermValue.Allow
-      let sendMessages = PermValue.Deny
-      let sendTTSMessages = PermValue.Deny
-      let manageMessages = PermValue.Deny
-      let embedLinks = PermValue.Deny
-      let attachFiles = PermValue.Deny
-      let readMessageHistory = PermValue.Allow
-      let mentionEveryone = PermValue.Deny
-      let useExternalEmojis = PermValue.Deny
-      let connect = PermValue.Deny
-      let speak = PermValue.Deny
-      let muteMembers = PermValue.Deny
-      let deafenMembers = PermValue.Deny
-      let moveMembers = PermValue.Deny
-      let useVoiceActivation = PermValue.Deny
-      let manageRoles = PermValue.Deny
-      let manageWebhooks = PermValue.Deny
-      let prioritySpeaker = PermValue.Deny
-      let stream = PermValue.Deny
+    type T =
+      {
+        CreateInstantInvite: PermValue
+        ManageChannel: PermValue
+        AddReactions: PermValue
+        ViewChannel: PermValue
+        SendMessages: PermValue
+        SendTTSMessages: PermValue
+        ManageMessages: PermValue
+        EmbedLinks: PermValue
+        AttachFiles: PermValue
+        ReadMessageHistory: PermValue
+        MentionEveryone: PermValue
+        UseExternalEmojis: PermValue
+        Connect: PermValue
+        Speak: PermValue
+        MuteMembers: PermValue
+        DeafenMembers: PermValue
+        MoveMembers: PermValue
+        UseVoiceActivation: PermValue
+        ManageRoles: PermValue
+        ManageWebhooks: PermValue
+        PrioritySpeaker: PermValue
+        Stream: PermValue
+      }
 
+      static member getDefault =
+        {
+          CreateInstantInvite = PermValue.Deny
+          ManageChannel = PermValue.Deny
+          AddReactions = PermValue.Deny
+          ViewChannel = PermValue.Deny
+          SendMessages = PermValue.Deny
+          SendTTSMessages = PermValue.Deny
+          ManageMessages = PermValue.Deny
+          EmbedLinks = PermValue.Deny
+          AttachFiles = PermValue.Deny
+          ReadMessageHistory = PermValue.Deny
+          MentionEveryone = PermValue.Deny
+          UseExternalEmojis = PermValue.Deny
+          Connect = PermValue.Deny
+          Speak = PermValue.Deny
+          MuteMembers = PermValue.Deny
+          DeafenMembers = PermValue.Deny
+          MoveMembers = PermValue.Deny
+          UseVoiceActivation = PermValue.Deny
+          ManageRoles = PermValue.Deny
+          ManageWebhooks = PermValue.Deny
+          PrioritySpeaker = PermValue.Deny
+          Stream = PermValue.Deny
+        }
+
+    let toStruct (t: T) =
       OverwritePermissions(
-        createInstantInvite,
-        manageChannel,
-        addReactions,
-        viewChannel,
-        sendMessages,
-        sendTTSMessages,
-        manageMessages,
-        embedLinks,
-        attachFiles,
-        readMessageHistory,
-        mentionEveryone,
-        useExternalEmojis,
-        connect,
-        speak,
-        muteMembers,
-        deafenMembers,
-        moveMembers,
-        useVoiceActivation,
-        manageRoles,
-        manageWebhooks,
-        prioritySpeaker,
-        stream)
+        t.CreateInstantInvite,
+        t.ManageChannel,
+        t.AddReactions,
+        t.ViewChannel,
+        t.SendMessages,
+        t.SendTTSMessages,
+        t.ManageMessages,
+        t.EmbedLinks,
+        t.AttachFiles,
+        t.ReadMessageHistory,
+        t.MentionEveryone,
+        t.UseExternalEmojis,
+        t.Connect,
+        t.Speak,
+        t.MuteMembers,
+        t.DeafenMembers,
+        t.MoveMembers,
+        t.UseVoiceActivation,
+        t.ManageRoles,
+        t.ManageWebhooks,
+        t.PrioritySpeaker,
+        t.Stream
+        )
 
-    let captainPerms =
-      let createInstantInvite = PermValue.Deny
-      let manageChannel = PermValue.Allow
-      let addReactions = PermValue.Allow
-      let viewChannel = PermValue.Allow
-      let sendMessages = PermValue.Allow
-      let sendTTSMessages = PermValue.Allow
-      let manageMessages = PermValue.Allow
-      let embedLinks = PermValue.Allow
-      let attachFiles = PermValue.Allow
-      let readMessageHistory = PermValue.Allow
-      let mentionEveryone = PermValue.Allow
-      let useExternalEmojis = PermValue.Allow
-      let connect = PermValue.Allow
-      let speak = PermValue.Allow
-      let muteMembers = PermValue.Allow
-      let deafenMembers = PermValue.Allow
-      let moveMembers = PermValue.Allow
-      let useVoiceActivation = PermValue.Allow
-      let manageRoles = PermValue.Allow
-      let manageWebhooks = PermValue.Allow
-      let prioritySpeaker = PermValue.Allow
-      let stream = PermValue.Allow
+    let lobbyEveryonePerms =
+      let def = T.getDefault
+      {def with
+         ViewChannel = PermValue.Allow
+         ReadMessageHistory = PermValue.Allow
+       } |> toStruct
 
-      OverwritePermissions(
-        createInstantInvite,
-        manageChannel,
-        addReactions,
-        viewChannel,
-        sendMessages,
-        sendTTSMessages,
-        manageMessages,
-        embedLinks,
-        attachFiles,
-        readMessageHistory,
-        mentionEveryone,
-        useExternalEmojis,
-        connect,
-        speak,
-        muteMembers,
-        deafenMembers,
-        moveMembers,
-        useVoiceActivation,
-        manageRoles,
-        manageWebhooks,
-        prioritySpeaker,
-        stream)
+    let lobbyCaptainPerms =
+      let def = T.getDefault
+      {def with
+        ManageChannel = PermValue.Allow
+        AddReactions = PermValue.Allow
+        ViewChannel = PermValue.Allow
+        SendMessages = PermValue.Allow
+        SendTTSMessages = PermValue.Allow
+        ManageMessages = PermValue.Allow
+        EmbedLinks = PermValue.Allow
+        AttachFiles = PermValue.Allow
+        ReadMessageHistory = PermValue.Allow
+        MentionEveryone = PermValue.Allow
+        UseExternalEmojis = PermValue.Allow
+        Connect = PermValue.Allow
+        Speak = PermValue.Allow
+        MuteMembers = PermValue.Allow
+        DeafenMembers = PermValue.Allow
+        MoveMembers = PermValue.Allow
+        UseVoiceActivation = PermValue.Allow
+        ManageRoles = PermValue.Allow
+        ManageWebhooks = PermValue.Allow
+        PrioritySpeaker = PermValue.Allow
+        Stream = PermValue.Allow
+        }|> toStruct
 
-    let playerPerms =
-      let createInstantInvite = PermValue.Deny
-      let manageChannel = PermValue.Deny
-      let addReactions = PermValue.Allow
-      let viewChannel = PermValue.Allow
-      let sendMessages = PermValue.Allow
-      let sendTTSMessages = PermValue.Deny
-      let manageMessages = PermValue.Deny
-      let embedLinks = PermValue.Allow
-      let attachFiles = PermValue.Allow
-      let readMessageHistory = PermValue.Allow
-      let mentionEveryone = PermValue.Deny
-      let useExternalEmojis = PermValue.Allow
-      let connect = PermValue.Allow
-      let speak = PermValue.Allow
-      let muteMembers = PermValue.Deny
-      let deafenMembers = PermValue.Deny
-      let moveMembers = PermValue.Deny
-      let useVoiceActivation = PermValue.Allow
-      let manageRoles = PermValue.Deny
-      let manageWebhooks = PermValue.Deny
-      let prioritySpeaker = PermValue.Deny
-      let stream = PermValue.Allow
+    let lobbyPlayerPerms =
+      let def = T.getDefault
+      {def with
+         AddReactions = PermValue.Allow
+         ViewChannel = PermValue.Allow
+         SendMessages = PermValue.Allow
+         EmbedLinks = PermValue.Allow
+         AttachFiles = PermValue.Allow
+         ReadMessageHistory = PermValue.Allow
+         UseExternalEmojis = PermValue.Allow
+         Connect = PermValue.Allow
+         Speak = PermValue.Allow
+         UseVoiceActivation = PermValue.Allow
+         Stream = PermValue.Allow
+       }|> toStruct
 
-      OverwritePermissions(
-        createInstantInvite,
-        manageChannel,
-        addReactions,
-        viewChannel,
-        sendMessages,
-        sendTTSMessages,
-        manageMessages,
-        embedLinks,
-        attachFiles,
-        readMessageHistory,
-        mentionEveryone,
-        useExternalEmojis,
-        connect,
-        speak,
-        muteMembers,
-        deafenMembers,
-        moveMembers,
-        useVoiceActivation,
-        manageRoles,
-        manageWebhooks,
-        prioritySpeaker,
-        stream)
 
-    let getPerms (guild: SocketGuild) (playerIDs: uint64 list): Generic.IEnumerable<Overwrite> =
+    let getLobbyPerms (guild: SocketGuild) (playerIDs: uint64 list): Generic.IEnumerable<Overwrite> =
       let rec loopIDs (perm) (target: PermissionTarget) (roles: uint64 list) acc =
         match roles with
         | [] -> acc
@@ -275,11 +259,12 @@ module discord =
       let everyone = [guild.EveryoneRole.Id]
       upcast(
         []
-        |> loopIDs captainPerms PermissionTarget.Role adminIDs
-        |> loopIDs captainPerms PermissionTarget.Role captainIDs
-        |> loopIDs playerPerms PermissionTarget.User playerIDs
-        |> loopIDs everyonePerms PermissionTarget.Role everyone
+        |> loopIDs lobbyCaptainPerms PermissionTarget.Role adminIDs
+        |> loopIDs lobbyCaptainPerms PermissionTarget.Role captainIDs
+        |> loopIDs lobbyPlayerPerms PermissionTarget.User playerIDs
+        |> loopIDs lobbyEveryonePerms PermissionTarget.Role everyone
       )
+
 
   let registerEvents () =
     discoClient.add_Log (fun log ->
