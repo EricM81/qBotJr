@@ -43,6 +43,7 @@
     <Compile Include="Service.fs" />
     <Compile Include="Program.fs" />
     <None Include="Script1.fsx" />
+    <Content Include="q" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Discord.Net" Version="2.3.0-dev-20201028.4" />
