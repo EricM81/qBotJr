@@ -344,3 +344,4 @@ healthchecksdb
 /qBotJr/settings.json
 
 .ionide
+/qBotJr/script2.fsx

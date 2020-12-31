@@ -130,6 +130,7 @@ module helper =
 
   let inline quoteEscape (str: string): string = if str.Contains (' ') then "\"" + str + "\"" else str
 
+
   let printPlayer (widthT: int) (ph: PlayerHere) =
     let post =
       match ph.isHere with
@@ -205,8 +206,8 @@ module helper =
         Some {server with PlayersHere = p :: server.PlayersHere; PlayerListIsDirty = true}
 
   let setPlayerMode (server: Server) (modeID: uint64) (user: IGuildUser) (isHere: bool) =
-    let swapModes (mOld: Mode) (mNew: Mode) =
-      mNew::(server.Modes |> List.filter (fun x -> x.Name <> mOld.Name))
+    let replaceMode (mode: Mode) (mode': Mode) =
+      mode'::(server.Modes |> List.filter (fun x -> x.Name <> mode.Name))
     let filterPlayers mode =
       let players' =
         mode.Players |> List.filter (fun x -> x.ID <> user.Id)
@@ -216,12 +217,13 @@ module helper =
     let server' =
       match setPlayerHere server user isHere with
       | Some s -> s
-      | _ -> server
-    let modeOpt = server.Modes |> List.tryFind (fun m -> m.HereMsg.MessageID = modeID)
+      | None -> server
+    let modeOpt =
+      server.Modes |> List.tryFind (fun m -> m.HereMsg.MessageID = modeID)
     match modeOpt with
-    | Some m ->
-      let mode' = {m with Players = filterPlayers m}
-      {server' with Modes = swapModes m mode'}
+    | Some mode ->
+      let mode' = {mode with Players = filterPlayers mode}
+      {server' with Modes = replaceMode mode mode'}
     | _ -> server'
 
 

@@ -1,6 +1,7 @@
 ﻿namespace qBotJr
 
 open System
+open System.Net.NetworkInformation
 open System.Text
 open System.Threading.Tasks
 open Discord
@@ -306,8 +307,7 @@ module discord =
   let parseDiscoChannel (name: string): uint64 option =
     _helper.stripUID channelPrefix suffix name
 
-  let mentionChannelID (chl: SocketChannel): string = channelPrefix + chl.Id.ToString() + suffix
-
+  let mentionChannel (chl: SocketChannel): string = channelPrefix + chl.Id.ToString() + suffix
 
   //let socketRoleToStrName (sr: SocketRole): string = sr.Name |> quoteEscape
 
@@ -406,8 +406,15 @@ module discord =
     emojis.Distrust |> Emoji |> parsedM.Message.AddReactionAsync |> Async.AwaitTask |> ignore
     None
 
-  let pingToString (p: PingType) =
+  let pingToPing (p: PingType) =
     match p with
     | PingType.Everyone -> "@everyone"
     | PingType.Here -> "@here"
+    | _ -> "guys"
+
+  let pingToSwitch (p: PingType) =
+    match p with
+    | PingType.Everyone -> "-e"
+    | PingType.Here -> "-h"
+    | PingType.NoOne -> "-n"
     | _ -> ""

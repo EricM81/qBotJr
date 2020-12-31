@@ -140,7 +140,7 @@ module qHere =
       let sb = StringBuilder ()
       let a format = bprintfn sb format
 
-      a "%s" <| pingToString argsV.Ping
+      a "%s" <| pingToPing argsV.Ping
       a ">>> **React with %s to join the queue!**" argsV.Emoji
       a "```"
       a

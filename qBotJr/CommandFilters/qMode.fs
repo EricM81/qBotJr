@@ -1,5 +1,5 @@
 ﻿namespace qBotJr
-
+//todo -e|h|n ping -a announce -t tag -d desc
 open System
 open System.Text
 open Discord
@@ -23,36 +23,45 @@ module qMode =
       {
         Server: Server
         Goo: GuildOO
-        AnnChnl: string option
         Ping: PingType option
+        AnnChnl: string option
+        Tag: string option
+        Description: string option
         Errors: string list
         ShowMan: bool
       }
       static member create s g =
-        {qModeArgs.Server = s; Goo = g; Ping = None; AnnChnl = None; Errors = []; ShowMan = false}
+        {qModeArgs.Server = s; Goo = g; Tag = None; Description = None; Ping = None; AnnChnl = None; Errors = []; ShowMan = false}
 
     [<Struct>] //val type
     type qModeValid =
       {
         Server: Server
         Goo: GuildOO
-        AnnChnl: SocketTextChannel
         Ping: PingType
-        Emoji: string
+        AnnChnl: SocketTextChannel
+        Tag: string
         Description: string
+        Emoji: string
       }
-      static member create s g desc ping announcements =
-        {qModeValid.Server = s; Goo = g; Description = desc; Ping = ping; AnnChnl = announcements; Emoji = emojis.RaiseHands}
+      static member create s g tag desc ping announcements =
+        {qModeValid.Server = s; Goo = g; Tag = tag; Description = desc; Ping = ping; AnnChnl = announcements; Emoji = emojis.RaiseHands}
 
     let cmdStrToArgs (xs: CommandLineArgs list) (acc: qModeArgs): qModeArgs =
+      let hdIsStr xs =
+        match xs with
+        | x :: xs when (not (String.IsNullOrEmpty(x))) -> true
+        | _ -> false
+
       let rec init (xs: CommandLineArgs list) (acc: qModeArgs): qModeArgs =
         match xs with
         | [] -> acc
         | x :: xs when x.Switch = Some 'E' -> init xs {acc with Ping = Some PingType.Everyone}
         | x :: xs when x.Switch = Some 'H' -> init xs {acc with Ping = Some PingType.Here}
         | x :: xs when x.Switch = Some 'N' -> init xs {acc with Ping = Some PingType.NoOne}
-        | x :: xs when x.Switch = Some 'A' && x.Values <> [] -> init xs {acc with AnnChnl = Some x.Values.Head}
-        | x :: xs when x.Switch = None && x.Values <> [] -> init xs {acc with AnnChnl = Some x.Values.Head}
+        | x :: xs when x.Switch = Some 'A' && hdIsStr x.Values -> init xs {acc with AnnChnl = Some x.Values.Head}
+        | x :: xs when x.Switch = Some 'T' && hdIsStr x.Values -> init xs {acc with Tag = Some x.Values.Head}
+        | x :: xs when x.Switch = Some 'D' && hdIsStr x.Values -> init xs {acc with Description = Some x.Values.Head}
         | x :: xs when x.Switch = Some '?' -> init xs {acc with ShowMan = true}
         | _ :: xs -> init xs acc
 
@@ -71,11 +80,17 @@ module qMode =
     open T
 
     let inline private createMsgFilters (args: qModeArgs) (callBack: MessageAction) =
+      let cmd x = Command.create x _perm callBack reactDistrust
+
       [
-        Command.create "-E" _perm callBack reactDistrust
+        cmd "-E"
+        //Todo refactor
         Command.create "-H" _perm callBack reactDistrust
         Command.create "-N" _perm callBack reactDistrust
         Command.create "-A" _perm callBack reactDistrust
+        Command.create "-T" _perm callBack reactDistrust
+        Command.create "-D" _perm callBack reactDistrust
+
       ]
       |> MessageFilter.create args.Goo.GuildID (DateTimeOffset.Now.AddMinutes (5.0)) (Some args.Goo.User.Id)
 
@@ -141,16 +156,22 @@ module qMode =
       let sb = StringBuilder ()
       let a format = bprintfn sb format
 
-      a "%s" <| pingToString argsV.Ping
+      a "Hey %s" <| pingToPing argsV.Ping
       a ">>> **React with %s to sign up for a special game mode!**" argsV.Emoji
       a "```"
+      a "%s" argsV.Tag
+      a "-----------"
       a "%s" argsV.Description
       a "```"
 
       sb.ToString ()
-
+//qMode -e -a #subs_announcements 't "healer only" -d "only pick healers"
     let printValid (argsV: qModeValid): string =
-      sprintf "Current Setting:\nqMode %s -a %s -d \"%s\"" (argsV.Ping.ToString ()) argsV.AnnChnl.Name argsV.Description
+      let ping = pingToSwitch argsV.Ping
+      let ann = mentionChannel argsV.AnnChnl
+      let tag' = quoteEscape argsV.Tag
+      let desc = quoteEscape argsV.Description
+      sprintf "Current Setting:\nqMode %s -a %s -t %s -d %s" ping ann tag' desc
 
     let updateHereList (modeID: uint64) (server: Server) (mr: MessageReaction): Server option =
       setPlayerMode server modeID mr.Goo.User mr.IsAdd |> Some
@@ -166,6 +187,9 @@ module qMode =
           [ReAction.create argsV.Emoji (updateHereList restMsg.Id)]
           |> ReactionFilter.create server.GuildID restMsg.Id DateTimeOffset.MaxValue None
           |> client.AddServerReactionFilter)
+
+    //save announce channel
+    //post announcement
 
     let inline run _ _ (argsV: qModeValid): Server option =
       async {
